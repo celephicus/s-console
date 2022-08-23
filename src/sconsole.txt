@@ -1,7 +1,7 @@
 # Source file thst defines the commands for sconsole.
 
 # We only have two commands, PRIMOP & COMMAND.
-# Primops are defined as a fragment of "C" code, commands are composed from primops and other words. 
+# Primops are defined as a fragment of "C" code, commands are composed from primops and other words.
 
 typedef int16_t sc_cell_t;
 
@@ -16,7 +16,12 @@ typedef struct {
 #define u_stackbase (&CONTEXT.ustack[CONSOLE_USER_STACK_SIZE])
 #define u_clear() CONTEXT.sp = &ustack[CONSOLE_USER_STACK_SIZE]
 #define u_tos() *CONTEXT.sp
-#define u_depth() (&ustack[CONSOLE_USER_STACK_SIZE] - g_consoleContext.sp)	 
+#define u_depth() (&ustack[CONSOLE_USER_STACK_SIZE] - g_consoleContext.sp)
+
+void execute(sc_context_t* ctx, int count) {
+	while (1) {
+	}
+}
 
 # Functions available to primops:
 #  User stack: u_clear(), u_pop(), u_push(), u_tos()
@@ -32,6 +37,23 @@ PRIMOP	event	"( u16: payload u8:id - ) Send event up to PC containing top stack 
     }
 PRIMOP 	lit8	"( - v8) Pushes next byte in instruction stream." [1, hide] { push(memget8(IP++)); }
 PRIMOP 	lit16	"( - v8) Pushes next word in instruction stream." [1, hide] { push(memget16(IP)); IP += 2; }
+PRIMOP 	quote	"( - addr) Reads length from IP, pushes address of next instruction, increments IP by length." [-1, hide] {
+        uint8_t len = memget(IP++);
+        push(IP); // address of quotation
+        IP += len; // jump over
+    }
+PRIMOP 	choice	"(f addr:t addr:f - ) Reads two addresses, likely quotations, then executes one depending on the next stack value." [-3] {
+        int16_t f = pop(), t = pop();
+        rpush(IP);
+        IP = (pop() == 0) ? f : t;
+    }
+PRIMOP 	if	"(p addr - ) Reads address, likely a quotation, then executes if the next stack value is non-zero." [-2] {
+        int16_t t = pop();
+        if (pop() != 0) {
+            rpush(IP);
+            IP = t;
+        }
+    }
 
 PRIMOP 	c@		"{addr - v8) Fetch 8 bit value from address." [-1] { tos() = memget8(tos()); }
 PRIMOP 	c!		"{v addr - ) Store 8 bit value at address." [-2] { uint16_t addr = pop(); memput8(addr, pop()); }
@@ -45,240 +67,32 @@ PRIMOP  mod		"(v:arg1 v:arg2 - v:result) Add 2 values, push result." [-2] { BINO
 PRIMOP  and		"(v:arg1 v:arg2 - v:result) Add 2 values, push result." [-2] { BINOP(&); }
 PRIMOP  or		"(v:arg1 v:arg2 - v:result) Add 2 values, push result." [-2] { BINOP(|); }
 PRIMOP  xor		"(v:arg1 v:arg2 - v:result) Add 2 values, push result." [-2] { BINOP(^); }
-PRIMOP  shl		"(v:arg1 v:arg2 - v:result) Add 2 values, push result." [-2] { BINOP(<<); }
-PRIMOP  shr		"(v:arg1 v:arg2 - v:result) Add 2 values, push result." [-2] { BINOP(>>); }
-PRIMOP  =		"(v:arg1 v:arg2 - v:result) Add 2 values, push result." [-2] { BINOP(==); }
-        bind(13, add);                       Add,                   "+",                     13  // y x         - sum 
-        bind(14, sub);                       Subtract,              "-",                     14  // y x         - diff 
-        bind(15, mul);                       Multiply,              "*",                     15  // y x         - prod 
-        bind(16, div);                       Divide,                "/",                     16  // y x         - quot 
-        bind(17, mod);                       Modulus,               "mod",                   17  // y x         - rem 
-        bind(18, andb);                      And,                   "and",                   18  // y x         - result 
-        bind(19, orb);                       Or,                    "or",                    19  // y x         - result 
-        bind(20, xorb);                      ExclusiveOr,           "xor",                   20  // y x         - result 
-        bind(21, shift);                     Shift,                 "shift",                 21  // x bits      - result 
-        bind(22, eq);                        Equal,                 "=",                     22  // y x         - pred 
-        bind(23, neq);                       NotEqual,              "<>",                    23  // y x         - pred 
-        bind(24, gt);                        Greater,               ">",                     24  // y x         - pred 
-        bind(25, geq);                       GreaterOrEqual,        ">=",                    25  // y x         - pred 
-        bind(26, lt);                        Less,                  "<",                     26  // y x         - pred 
-        bind(27, leq);                       LessOrEqual,           "<=",                    27  // y x         - pred 
-
-VAR 
-
-        //bind(0,  ret);				[Return,                "(return)",              0   //             -  (from return)
-        //bind(1,  lit8);                      
-        //bind(2,  lit16);                     
-        bind(3,  quote);                     
-        bind(4,  eventHeader);               EventHeader,           "event{",                4   // id          - 
-        //bind(5,  eventBody8);              EventBody8,            "cdata",                 5   // val         - 
-        bind(6,  eventBody16);               EventBody16,           "data",                  6   // val         - 
-        bind(7,  eventFooter);               EventFooter,           "}event",                7   //             - 
-        bind(8,  eventOp);                     Event,                 "event",                 8   // val id      - 
-        //bind(9,  fetch8);                    Fetch8,                "c@",                    9   // addr        - val 
-        //bind(10, store8);                    Store8,                "c!",                    10  // val addr    - 
-        //bind(11, fetch16);                   Fetch16,               "@",                     11  // addr        - val 
-        //bind(12, store16);                   Store16,               "!",                     12  // val addr    - 
-        bind(13, add);                       Add,                   "+",                     13  // y x         - sum 
-        bind(14, sub);                       Subtract,              "-",                     14  // y x         - diff 
-        bind(15, mul);                       Multiply,              "*",                     15  // y x         - prod 
-        bind(16, div);                       Divide,                "/",                     16  // y x         - quot 
-        bind(17, mod);                       Modulus,               "mod",                   17  // y x         - rem 
-        bind(18, andb);                      And,                   "and",                   18  // y x         - result 
-        bind(19, orb);                       Or,                    "or",                    19  // y x         - result 
-        bind(20, xorb);                      ExclusiveOr,           "xor",                   20  // y x         - result 
-        bind(21, shift);                     Shift,                 "shift",                 21  // x bits      - result 
-        bind(22, eq);                        Equal,                 "=",                     22  // y x         - pred 
-        bind(23, neq);                       NotEqual,              "<>",                    23  // y x         - pred 
-        bind(24, gt);                        Greater,               ">",                     24  // y x         - pred 
-        bind(25, geq);                       GreaterOrEqual,        ">=",                    25  // y x         - pred 
-        bind(26, lt);                        Less,                  "<",                     26  // y x         - pred 
-        bind(27, leq);                       LessOrEqual,           "<=",                    27  // y x         - pred 
-        bind(28, notb);                      Not,                   "not",                   28  // x           - result 
-        bind(29, neg);                       Negate,                "neg",                   29  // x           - -x 
-        bind(30, inc);                       Increment,             "1+",                    30  // x           - x+1 
-        bind(31, dec);                       Decrement,             "1-",                    31  // x           - x-1 
-        bind(32, drop);                      Drop,                  "drop",                  32  // x           - 
-        bind(33, dup);                       Duplicate,             "dup",                   33  // x           - x x 
-        bind(34, swap);                      Swap,                  "swap",                  34  // y x         - x y 
-        bind(35, pick);                      Pick,                  "pick",                  35  // n           - val 
-        bind(36, roll);                      Roll,                  "roll",                  36  // n           - 
-        bind(37, clr);                       Clear,                 "clear",                 37  //             - 
-        bind(38, pushr);                     Push,                  "push",                  38  // x           -   (to return) 
-        bind(39, popr);                      Pop,                   "pop",                   39  //             - x (from return) 
-        bind(40, peekr);                     Peek,                  "peek",                  40  //             - x (from return) 
-        bind(41, forget);                    Forget,                "forget",                41  // addr        - 
-        bind(42, call);                      Call,                  "call",                  42  // addr        - 
-        bind(43, choice);                    Choice,                "choice",                43  // q p         - 
-        bind(44, chooseIf);                  If,                    "if",                    44  // q           - 
-        bind(45, loopTicks);                 LoopTicks,             "loopTicks",             45  //             - 
-        bind(46, setLoop);                   SetLoop,               "setLoop",               46  // addr        - 
-        bind(47, stopLoop);                  StopLoop,              "stopLoop",              47  //             - 
-        bind(48, resetBoard);                Reset,                 "(reset)",               48  //             - 
-        bind(49, pinMode);                   PinMode,               "pinMode",               49  // mode pin    - 
-        bind(50, digitalRead);               DigitalRead,           "digitalRead",           50  // pin         - val 
-        bind(51, digitalWrite);              DigitalWrite,          "digitalWrite",          51  // val pin     - 
-        bind(52, analogRead);                AnalogRead,            "analogRead",            52  // pin         - val 
-        bind(53, analogWrite);               AnalogWrite,           "analogWrite",           53  // val pin     - 
-        bind(54, attachISR);                 AttachISR,             "attachISR",             54  // addr i mode - 
-        bind(55, detachISR);                 DetachISR,             "detachISR",             55  // i           - 
-        bind(56, milliseconds);              Milliseconds,          "milliseconds",          56  //             - millis 
-        bind(57, pulseIn);                   PulseIn,               "pulseIn",               57] // val pin     - duration 
-        bind(58, next);
-        bind(59, nop);
-
-
-
-    /* Binary and unary ALU operations pop one or two values and push back one. These include basic
-    arithmetic, bitwise operations, comparison, etc.
-    
-    The truth value used in Brief is all bits reset (-1) and so the bitwise `and`/`or`/`not` words
-    serve equally well as logical operators. */
-
-    void add()
-    {
-        int16_t x = pop();
-        *s = *s + x;
-    }
-
-    void sub()
-    {
-        int16_t x = pop();
-        *s = *s - x;
-    }
-
-    void mul()
-    {
-        int16_t x = pop();
-        *s = *s * x;
-    }
-
-    void div()
-    {
-        int16_t x = pop();
-        *s = *s / x;
-    }
-
-    void mod()
-    {
-        int16_t x = pop();
-        *s = *s % x;
-    }
-
-    void andb()
-    {
-        int16_t x = pop();
-        *s = *s & x;
-    }
-
-    void orb()
-    {
-        int16_t x = pop();
-        *s = *s | x;
-    }
-
-    void xorb()
-    {
-        int16_t x = pop();
-        *s = *s ^ x;
-    }
-
-    void shift()
-    {
+PRIMOP  shift	"(v:arg1 v:arg2 - v:result) Shift arg1 by |arg2|, left if arg2 negative, right otherwise, push result." [-2] {
         int16_t x = pop(); // negative values shift left, positive right
-        if (x < 0) *s = *s << -x;
-        else *s = *s >> x;
+        tos() = (x < 0) ? tos() << -x : tos() >> x;
+	}
+PRIMOP  =		"(v:arg1 v:arg2 - v:result) Add 2 values, push result." [-2] { BINOP(==); }
+PRIMOP  <		"(v:arg1 v:arg2 - v:result) Add 2 values, push result." [-2] { BINOP(<); }
+PRIMOP  u<		"(v:arg1 v:arg2 - v:result) Add 2 values, push result." [-2] { UBINOP(<); }
+PRIMOP  negate	"(v:arg - v:result) Negate value" [-1] { UNOP(-); }
+PRIMOP  not		"(v:arg - v:result) Invert value" [-1] { UNOP(~); }
+PRIMOP  1+		"(v:arg - v:result) Negate value" [-1] { tos() = tos() + 1; }
+PRIMOP  1-		"(v:arg - v:result) Negate value" [-1] { tos() = tos() - 1; }
+
+PRIMOP 	drop	"(v*n - n*(n-1)) Discard top value." [-1] { u_drop(); }
+PRIMOP 	dup 	"(... n - ... n n) Duplicate top value." [-1, 1] { u_push(u_tos()); }
+PRIMOP 	swap 	"(n1 n2 - n2 n1) Swap two top value.s" [-2] {
+        int16_t t = u_tos(), n = u_nos();
+        u_tos = u_nos(); u_nos = t;
     }
-
-    inline int16_t boolval(int16_t b) // helper (not Brief instruction)
-    {
-        // true is all bits on (works for bitwise and logical operations alike)
-        return b ? 0xFFFF : 0;
-    }
-
-    void eq()
-    {
-        int16_t x = pop();
-        *s = boolval(*s == x);
-    }
-
-    void neq()
-    {
-        int16_t x = pop();
-        *s = boolval(*s != x);
-    }
-
-    void gt()
-    {
-        int16_t x = pop();
-        *s = boolval(*s > x);
-    }
-
-    void geq()
-    {
-        int16_t x = pop();
-        *s = boolval(*s >= x);
-    }
-
-    void lt()
-    {
-        int16_t x = pop();
-        *s = boolval(*s < x);
-    }
-
-    void leq()
-    {
-        int16_t x = pop();
-        *s = boolval(*s <= x);
-    }
-
-    void notb()
-    {
-        *s = ~(*s);
-    }
-
-    void neg()
-    {
-        *s = -(*s);
-    }
-
-    void inc()
-    {
-        *s = *s + 1;
-    }
-
-    void dec()
-    {
-        *s = *s - 1;
-    }
-
-    /* Stack manipulation instructions */
-
-    void drop()
-    {
-        s--;
-    }
-
-    void dup()
-    {
-        push(*s);
-    }
-
-    void swap()
-    {
-        int16_t t = *s;
-        int16_t* n = s - 1;
-        *s = *n; *n = t;
-    }
-
-    void pick() // nth item to top of stack
-    {
+PRIMOP pick 	"( n -- v)	Copy nth item to top of stack." [] {
         int16_t n = pop();
-        push(*(s - n));
+		verify_stack(n);
+        u_push(u_pick(n));
     }
-
-    void roll() // top item slipped into nth position
-    {
+PRIMOP roll		"(n -- ) Rotate stack so that top item slipped into nth position." [] {
+        int16_t n = pop();
+		verify_stack(n);
         int16_t n = pop(), t = *(s - n);
         int16_t* i;
         for (i = s - n; i < s; i++)
@@ -287,10 +101,81 @@ VAR
         }
         *s = t;
     }
+PRIMOP clear "( - <empty>) Clear stack." [] { u_clear(); }
 
-    void clr() // clear stack
+VAR here "( -- addr) Address of next free dictionary byte."
+int16_t here; // dictionary 'here' pointer
+    int16_t last; // last definition address
+
+
+        //bind(0,  ret);				[Return,                "(return)",              0   //             -  (from return)
+        //bind(1,  lit8);
+        //bind(2,  lit16);
+        //bind(3,  quote);
+        bind(4,  eventHeader);               EventHeader,           "event{",                4   // id          -
+        //bind(5,  eventBody8);              EventBody8,            "cdata",                 5   // val         -
+        bind(6,  eventBody16);               EventBody16,           "data",                  6   // val         -
+        bind(7,  eventFooter);               EventFooter,           "}event",                7   //             -
+        bind(8,  eventOp);                     Event,                 "event",                 8   // val id      -
+        //bind(9,  fetch8);                    Fetch8,                "c@",                    9   // addr        - val
+        //bind(10, store8);                    Store8,                "c!",                    10  // val addr    -
+        //bind(11, fetch16);                   Fetch16,               "@",                     11  // addr        - val
+        //bind(12, store16);                   Store16,               "!",                     12  // val addr    -
+        //bind(13, add);                       Add,                   "+",                     13  // y x         - sum
+        //bind(14, sub);                       Subtract,              "-",                     14  // y x         - diff
+        //bind(15, mul);                       Multiply,              "*",                     15  // y x         - prod
+        //bind(16, div);                       Divide,                "/",                     16  // y x         - quot
+        //bind(17, mod);                       Modulus,               "mod",                   17  // y x         - rem
+        //bind(18, andb);                      And,                   "and",                   18  // y x         - result
+        //bind(19, orb);                       Or,                    "or",                    19  // y x         - result
+        //bind(20, xorb);                      ExclusiveOr,           "xor",                   20  // y x         - result
+        //bind(21, shift);                     Shift,                 "shift",                 21  // x bits      - result
+        //ind(22, eq);                        Equal,                 "=",                     22  // y x         - pred
+        bind(23, neq);                       NotEqual,              "<>",                    23  // y x         - pred
+        bind(24, gt);                        Greater,               ">",                     24  // y x         - pred
+        bind(25, geq);                       GreaterOrEqual,        ">=",                    25  // y x         - pred
+        bind(26, lt);                        Less,                  "<",                     26  // y x         - pred
+        bind(27, leq);                       LessOrEqual,           "<=",                    27  // y x         - pred
+        bind(28, notb);                      Not,                   "not",                   28  // x           - result
+        bind(29, neg);                       Negate,                "neg",                   29  // x           - -x
+        bind(30, inc);                       Increment,             "1+",                    30  // x           - x+1
+        bind(31, dec);                       Decrement,             "1-",                    31  // x           - x-1
+        bind(32, drop);                      Drop,                  "drop",                  32  // x           -
+        bind(33, dup);                       Duplicate,             "dup",                   33  // x           - x x
+        bind(34, swap);                      Swap,                  "swap",                  34  // y x         - x y
+        bind(35, pick);                      Pick,                  "pick",                  35  // n           - val
+        bind(36, roll);                      Roll,                  "roll",                  36  // n           -
+        bind(37, clr);                       Clear,                 "clear",                 37  //             -
+        bind(38, pushr);                     Push,                  "push",                  38  // x           -   (to return)
+        bind(39, popr);                      Pop,                   "pop",                   39  //             - x (from return)
+        bind(40, peekr);                     Peek,                  "peek",                  40  //             - x (from return)
+        bind(41, forget);                    Forget,                "forget",                41  // addr        -
+        bind(42, call);                      Call,                  "call",                  42  // addr        -
+        bind(43, choice);                    Choice,                "choice",                43  // q p         -
+        bind(44, chooseIf);                  If,                    "if",                    44  // q           -
+        bind(45, loopTicks);                 LoopTicks,             "loopTicks",             45  //             -
+        bind(46, setLoop);                   SetLoop,               "setLoop",               46  // addr        -
+        bind(47, stopLoop);                  StopLoop,              "stopLoop",              47  //             -
+        bind(48, resetBoard);                Reset,                 "(reset)",               48  //             -
+        bind(49, pinMode);                   PinMode,               "pinMode",               49  // mode pin    -
+        bind(50, digitalRead);               DigitalRead,           "digitalRead",           50  // pin         - val
+        bind(51, digitalWrite);              DigitalWrite,          "digitalWrite",          51  // val pin     -
+        bind(52, analogRead);                AnalogRead,            "analogRead",            52  // pin         - val
+        bind(53, analogWrite);               AnalogWrite,           "analogWrite",           53  // val pin     -
+        bind(54, attachISR);                 AttachISR,             "attachISR",             54  // addr i mode -
+        bind(55, detachISR);                 DetachISR,             "detachISR",             55  // i           -
+        bind(56, milliseconds);              Milliseconds,          "milliseconds",          56  //             - millis
+        bind(57, pulseIn);                   PulseIn,               "pulseIn",               57] // val pin     - duration
+        bind(58, next);
+        bind(59, nop);
+
+
+
+
+    inline int16_t boolval(int16_t b) // helper (not Brief instruction)
     {
-        s = dstack;
+        // true is all bits on (works for bitwise and logical operations alike)
+        return b ? 0xFFFF : 0;
     }
 
     /* Moving items between data and return stack. The return stack is commonly also used to store data
@@ -333,49 +218,6 @@ VAR
         p = pop();
     }
 
-    /* Quotations and `choice` need some explanation. The idea behind quotations is something like
-    an anonymous lambda and is used with some nice syntax in the Brief language. The `quote`
-    instruction precedes a sequence that is to be treated as an embedded definition
-    essentially. It takes a length as an operand, pushes the address of the sequence of code
-    following and then jumps over that code.
-
-    The net result is that the sequence is not executed, but its address is left on the stack
-    for future words to call as they see fit.
-
-    One primitive that makes use of this is `choice` which is the idiomatic Brief conditional.
-    It pops two addresses (likely from two quotations) along with a predicate value (likely the
-    result of some comparison or logical operations). It then executes one or the other
-    quotation depending on the predicate.
-
-    Another primitive making use of quotations is `chooseIf` (called simply `if` in Brief) which
-    pops a predicate and a single address; calling the address if non-zero.
-
-    Many secondary words in Brief also use quotation such as `bi`, `tri`, `map`, `fold`, etc.
-    which act as higher-order functions. */
-
-    void quote()
-    {
-        uint8_t len = memget(p++);
-        push(p); // address of quotation
-        p += len; // jump over
-    }
-
-    void choice()
-    {
-        int16_t f = pop(), t = pop();
-        rpush(p);
-        p = pop() == 0 ? f : t;
-    }
-
-    void chooseIf()
-    {
-        int16_t t = pop();
-        if (pop() != 0)
-        {
-            rpush(p);
-            p = t;
-        }
-    }
 
     void next()
     {
@@ -416,7 +258,7 @@ VAR
     }
 
     /* Upon first connecting to a board, the PC will execute a reset so that assumptions about
-    dictionary contents and such hold true. */ 
+    dictionary contents and such hold true. */
 
     void resetBoard() // likely called initialy upon connecting from PC
     {
@@ -635,10 +477,10 @@ VAR
 
     Brief setup binds all of the instruction functions from above. After setup, the hosting
     project is free to bind its own custom functions as well!
-    
+
     An example of this could be to add a `delayMillis` instruction. Such an instruction is not
     included in the VM to discourage blocking code, but you're free to add whatever you like:
-    
+
     void delayMillis()
     {
         delay((int)brief::pop());
@@ -653,7 +495,7 @@ VAR
     This adds the new instruction as opcode 100. You can then give it a name and tell the compiler
     about it with `compiler.Instruction("delay", 100)` in PC-side code or can tell the Brief
     interactive about it with `100 'delay instruction`. This is the extensibility story for Brief.
-    
+
     Notice that custom instruction function may retrieve and return values via the
     `brief::pop()` and `brief::push()` functions, as well as raise errors with
     `brief::error(uint8_t code)`. */

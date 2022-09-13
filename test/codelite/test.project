@@ -1,20 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CodeLite_Project Name="test" Version="11000" InternalType="Console">
+  <VirtualDirectory Name="sconsole">
+    <File Name="../../src/sconsole.h"/>
+    <File Name="../../src/sconsole.c"/>
+    <File Name="../sconsole-config.h"/>
+  </VirtualDirectory>
   <Description/>
   <Dependencies/>
   <VirtualDirectory Name="src">
+    <File Name="../test_r_stack.c"/>
+    <File Name="../test_u_stack.c"/>
     <File Name="../main.c"/>
     <File Name="../t_support.h"/>
     <File Name="../t_support.c"/>
-    <File Name="../../src/sconsole.c"/>
     <File Name="../unity_internals.h"/>
     <File Name="../unity_config.h"/>
     <File Name="../unity.h"/>
     <File Name="../unity.c"/>
     <File Name="../test_toy_vm.c" ExcludeProjConfig=""/>
-    <File Name="../test_stack.c"/>
     <File Name="../test_init.c"/>
-    <File Name="../sconsole-config.h"/>
   </VirtualDirectory>
   <Settings Type="Executable">
     <GlobalSettings>

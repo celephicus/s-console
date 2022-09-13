@@ -11,38 +11,42 @@ enum {
 	//EXC_RUN_HALTED = -2,	// Returned from run() after executing a HALT.
 
 	SC_EXC_OK = 0,
-	SC_EXC_BAD_OPCODE ,
-	SC_EXC_BAD_MEM,		// Bad memory access to VM.
-	SC_EXC_USER_STACK_UFLOW, SC_EXC_USER_STACK_OFLOW, SC_EXC_USER_STACK_ACCESS,
-	SC_EXC_CALL_STACK_UFLOW, SC_EXC_CALL_STACK_OFLOW, SC_EXC_CALL_STACK_ACCESS,
+//	SC_EXC_BAD_OPCODE ,
+//	SC_EXC_BAD_MEM,		// Bad memory access to VM.
+	SC_EXC_U_STACK_UFLOW, SC_EXC_U_STACK_OFLOW, SC_EXC_U_STACK_ACCESS,
+	SC_EXC_R_STACK_UFLOW, SC_EXC_R_STACK_OFLOW, SC_EXC_R_STACK_ACCESS,
 };
 
 // Used to include internal stuff for implementation and testing, not for normal usage.
 #ifdef SCONSOLE_WANT_INTERNAL_DEFS
 
 // The context, holds the current state of a sconsole process. 
-typedef struct {
+typedef struct __attribute__((packed)) {
 #ifdef TEST
-	// TODO: Use __attribute__((packed))
-	sc_cell_t t_ustack_pre;
+	sc_cell_t t_u_stack_pre;
 #endif
-	sc_cell_t ustack[SC_DATA_STACK_SIZE];
+	sc_cell_t u_stack[SC_U_STACK_SIZE];
 #ifdef TEST
-	sc_cell_t t_ustack_post;
+	sc_cell_t t_u_stack_post;
 #endif
-	sc_cell_t* usp;
+	sc_cell_t* u_sp;
 
-	sc_cell_t rstack[SC_RETURN_STACK_SIZE];
-	sc_cell_t* rp;
+#ifdef TEST
+	sc_cell_t t_r_stack_pre;
+#endif
+	sc_cell_t r_stack[SC_R_STACK_SIZE];
+#ifdef TEST
+	sc_cell_t t_r_stack_post;
+#endif
+	sc_cell_t* r_sp;
 
 	sc_cell_t err;		// Set non-zero on error.
 	sc_cell_t ip;		// Index of next instruction to be executed. 
 } sc_context_t;
 
 // Heap and some global variables used by all sconsole processes.
-typedef struct {
+typedef struct __attribute__((packed)) {
 #ifdef TEST
-	// TODO: Use __attribute__((packed))
 	uint8_t t_heap_pre;
 #endif
 	uint8_t heap[SC_HEAP_SIZE];
@@ -51,7 +55,7 @@ typedef struct {
 #endif
 	sc_cell_t here;		// Next free byte in heap.
 	sc_cell_t latest;	// Free byte following last definition. 
-	sc_context_t* current;	// Currenty executing sconsole process.
+	sc_context_t* current;	// Currently executing sconsole process.
 } sc_globals_t;
 
 extern sc_globals_t g_sc;
@@ -61,40 +65,38 @@ extern sc_context_t* sc_ctx;
 
 #define ELEMENT_COUNT(a_) (sizeof(a_) / sizeof (a_[0]))
 
-/* User stack operations. Designed to be called from a function where `ctx' points to a sc_contect_t. 
+/* User stack operations. Designed to be called from a function where `sc_ctx' points to a sc_context_t. 
 	Basic functions are pop, push, clear; tos & nos are top & next item on stack.
 	stackbase is a factor for a few macros.
 	depth is the number of items on the stack, and free() is the number of free spaces before it overflows.
-	There is no checking of the stack, this must be done before using these functions. */
-#define u_pop() u_can_pop(1) ? (*(sc_ctx->usp++)) : (sc_ctx->err = SC_EXC_USER_STACK_UFLOW, 0)
-#define u_push(x_) if (u_can_push(1)) *--sc_ctx->usp = (sc_cell_t)(x_); else sc_ctx->err = SC_EXC_USER_STACK_OFLOW
-#define u_size() ELEMENT_COUNT(sc_ctx->ustack)
-#define u_stackbase (sc_ctx->ustack + u_size())
-#define u_reset() sc_ctx->usp = u_stackbase;
-#define u_peek(n_) *( ((n_) < u_depth()) ? &sc_ctx->usp[n_] : (sc_ctx->err = SC_EXC_USER_STACK_ACCESS, &sc_ctx->ustack[0]))
+	can_pop/can_push checks if can push/pop the user stack by the specified number of items.
+*/
+#define u_pop() u_can_pop(1) ? (*(sc_ctx->u_sp++)) : (sc_ctx->err = SC_EXC_U_STACK_UFLOW, 0)
+#define u_push(x_) if (u_can_push(1)) *--sc_ctx->u_sp = (sc_cell_t)(x_); else sc_ctx->err = SC_EXC_U_STACK_OFLOW
+#define u_size() ELEMENT_COUNT(sc_ctx->u_stack)
+#define u_stackbase (sc_ctx->u_stack + u_size())
+#define u_reset() sc_ctx->u_sp = u_stackbase;
+#define u_peek(n_) *( ((n_) < u_depth()) ? &sc_ctx->u_sp[n_] : (sc_ctx->err = SC_EXC_U_STACK_ACCESS, &sc_ctx->u_stack[0]))
 #define u_tos u_peek(0)
 #define u_nos u_peek(1)
-#define u_depth() (u_stackbase - sc_ctx->usp)		
-#define u_free() (sc_ctx->usp - sc_ctx->ustack)
-
-// Checks if can push/pop the user stack.
+#define u_depth() (u_stackbase - sc_ctx->u_sp)		
+#define u_free() (sc_ctx->u_sp - sc_ctx->u_stack)
 #define u_can_pop(n_)  (u_depth() >= (n_))
-#define u_can_push(n_) (u_depth() <= (SC_DATA_STACK_SIZE - (n_)))
+#define u_can_push(n_) (u_depth() <= (SC_U_STACK_SIZE - (n_)))
 
-// Return stack has more limited operations. 
-#define r_pop() (*(sc_ctx->rp++))
-#define r_push(x_) *--sc_ctx->rp = (sc_cell_t)(x_)
-#define r_stackbase (sc_ctx->rstack + sizeof(sc_ctx->rstack))
-#define r_reset() sc_ctx->rp = r_stackbase;
-#define r_peek(n_) sc_ctx->rp[n_]
+// Return stack operations are a copy of those for the user stack but with `u_' replaced with `r_'
+#define r_pop() r_can_pop(1) ? (*(sc_ctx->r_sp++)) : (sc_ctx->err = SC_EXC_R_STACK_UFLOW, 0)
+#define r_push(x_) if (r_can_push(1)) *--sc_ctx->r_sp = (sc_cell_t)(x_); else sc_ctx->err = SC_EXC_R_STACK_OFLOW
+#define r_size() ELEMENT_COUNT(sc_ctx->r_stack)
+#define r_stackbase (sc_ctx->r_stack + r_size())
+#define r_reset() sc_ctx->r_sp = r_stackbase;
+#define r_peek(n_) *( ((n_) < r_depth()) ? &sc_ctx->r_sp[n_] : (sc_ctx->err = SC_EXC_R_STACK_ACCESS, &sc_ctx->r_stack[0]))
 #define r_tos r_peek(0)
 #define r_nos r_peek(1)
-#define r_depth() (r_stackbase - sc_ctx->rp)		
-#define r_free() (SC_RETURN_STACK_SIZE - r_depth())
-
-// Checks if can push/pop the user stack.
+#define r_depth() (r_stackbase - sc_ctx->r_sp)		
+#define r_free() (sc_ctx->r_sp - sc_ctx->r_stack)
 #define r_can_pop(n_)  (r_depth() >= (n_))
-#define r_can_push(n_) (r_depth() <= (SC_RETURN_STACK_SIZE - (n_)))
+#define r_can_push(n_) (r_depth() <= (SC_R_STACK_SIZE - (n_)))
 
 // Instruction pointer.
 #define IP (sc_ctx->ip)

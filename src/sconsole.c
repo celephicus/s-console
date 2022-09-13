@@ -13,7 +13,7 @@ void scInitContext(sc_context_t* ctx) {
 	sc_ctx = ctx;
 	sc_ctx->err = SC_EXC_OK;		// Set no error. 
 	u_reset();
-//	r_reset();
+	r_reset();
 	// TODO: Set IP to some value to fault if not set to something else. 
 }
 

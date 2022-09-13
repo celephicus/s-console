@@ -6,106 +6,102 @@
 #include "unity.h"
 #include "t_support.h"
 
-TT_BEGIN_INCLUDE()
-//#include "testOne.h"
-TT_END_INCLUDE()
-
 #define SCONSOLE_WANT_INTERNAL_DEFS
 #include "sconsole.h"
 
 TT_BEGIN_FIXTURE(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);
 
-void testStackInit(void) {
+void testU_StackInit(void) {
     // Check guards are contiguous. 
-    TEST_ASSERT_EQUAL_PTR(&sc_ctx->t_ustack_pre+1, &sc_ctx->ustack[0]);
-    TEST_ASSERT_EQUAL_PTR(&sc_ctx->t_ustack_post-1, &sc_ctx->ustack[SC_DATA_STACK_SIZE-1]);
-    // sc_ctx->t_ustack_post += 1;
+    TEST_ASSERT_EQUAL_PTR(&sc_ctx->t_u_stack_pre+1, &sc_ctx->u_stack[0]);
+    TEST_ASSERT_EQUAL_PTR(&sc_ctx->t_u_stack_post-1, &sc_ctx->u_stack[SC_U_STACK_SIZE-1]);
 
+	// Check stack initialised by fixture.
     TEST_ASSERT_EQUAL(0, u_depth());
-    TEST_ASSERT_EQUAL(SC_DATA_STACK_SIZE, u_free());
+    TEST_ASSERT_EQUAL(SC_U_STACK_SIZE, u_size());
 }
 
-void testStackPopPush(void) {
-    for (int i = 0; i < SC_DATA_STACK_SIZE; i += 1) {
+void testU_StackPopPush(void) {
+    for (int i = 0; i < SC_U_STACK_SIZE; i += 1) {
         u_push(i);
         TEST_ASSERT_EQUAL(i+1, u_depth());
-        TEST_ASSERT_EQUAL(SC_DATA_STACK_SIZE - i - 1, u_free());
+        TEST_ASSERT_EQUAL(SC_U_STACK_SIZE - i - 1, u_free());
     }
-    for (int i = 0; i < SC_DATA_STACK_SIZE; i += 1) {
-        TEST_ASSERT_EQUAL_UINT32(SC_DATA_STACK_SIZE - i - 1, u_pop());
-        TEST_ASSERT_EQUAL(SC_DATA_STACK_SIZE - i - 1, u_depth());
+    for (int i = 0; i < SC_U_STACK_SIZE; i += 1) {
+        TEST_ASSERT_EQUAL_UINT32(SC_U_STACK_SIZE - i - 1, u_pop());
+        TEST_ASSERT_EQUAL(SC_U_STACK_SIZE - i - 1, u_depth());
         TEST_ASSERT_EQUAL(i + 1, u_free());
     }
 }
 
-void testStackReset(void) {
+void testU_StackReset(void) {
     u_reset();
     TEST_ASSERT_EQUAL(0, u_depth());
     u_push(1);
     u_reset();
     TEST_ASSERT_EQUAL(0, u_depth());
 
-    for (int i = 0; i < SC_DATA_STACK_SIZE; i += 1) 
+    for (int i = 0; i < SC_U_STACK_SIZE; i += 1) 
         u_push(i);
-    TEST_ASSERT_EQUAL(SC_DATA_STACK_SIZE, u_depth());
+    TEST_ASSERT_EQUAL(SC_U_STACK_SIZE, u_depth());
     u_reset();
     TEST_ASSERT_EQUAL(0, u_depth());
 }
 
-void testStackPeek(void) {
-    for (int i = 0; i < SC_DATA_STACK_SIZE; i += 1)
+void testU_StackPeek(void) {
+    for (int i = 0; i < SC_U_STACK_SIZE; i += 1)
         u_push(i);
 
-    for (int i = 0; i < SC_DATA_STACK_SIZE; i += 1)
-        TEST_ASSERT_EQUAL(SC_DATA_STACK_SIZE - i - 1, u_peek(i));
+    for (int i = 0; i < SC_U_STACK_SIZE; i += 1)
+        TEST_ASSERT_EQUAL(SC_U_STACK_SIZE - i - 1, u_peek(i));
 }
 
-void testStackTosNos(void) {
+void testU_StackTosNos(void) {
     u_push(0);
     TEST_ASSERT_EQUAL_UINT32(0, u_tos);
 
-    for (int i = 1; i < SC_DATA_STACK_SIZE; i += 1) {
+    for (int i = 1; i < SC_U_STACK_SIZE; i += 1) {
         u_push(i);
         TEST_ASSERT_EQUAL_UINT32(i - 1, u_nos);
         TEST_ASSERT_EQUAL_UINT32(i, u_tos);
     }
 }
 
-void testStackCanPop(void) {
+void testU_StackCanPop(void) {
     TEST_ASSERT_TRUE(u_can_pop(0));
     TEST_ASSERT_FALSE(u_can_pop(1));
-    TEST_ASSERT_FALSE(u_can_pop(SC_DATA_STACK_SIZE));
-    TEST_ASSERT_FALSE(u_can_pop(SC_DATA_STACK_SIZE + 1));
+    TEST_ASSERT_FALSE(u_can_pop(SC_U_STACK_SIZE));
+    TEST_ASSERT_FALSE(u_can_pop(SC_U_STACK_SIZE + 1));
 
     u_push(33);
     TEST_ASSERT_TRUE(u_can_pop(0));
     TEST_ASSERT_TRUE(u_can_pop(1));
     TEST_ASSERT_FALSE(u_can_pop(2));
-    TEST_ASSERT_FALSE(u_can_pop(SC_DATA_STACK_SIZE));
-    TEST_ASSERT_FALSE(u_can_pop(SC_DATA_STACK_SIZE + 1));
+    TEST_ASSERT_FALSE(u_can_pop(SC_U_STACK_SIZE));
+    TEST_ASSERT_FALSE(u_can_pop(SC_U_STACK_SIZE + 1));
 
-    for (int i = 1; i < SC_DATA_STACK_SIZE - 1; i += 1) 
+    for (int i = 1; i < SC_U_STACK_SIZE - 1; i += 1) 
         u_push(i + 33);
-    TEST_ASSERT_TRUE(u_can_pop(SC_DATA_STACK_SIZE - 1));
-    TEST_ASSERT_FALSE(u_can_pop(SC_DATA_STACK_SIZE));
-    TEST_ASSERT_FALSE(u_can_pop(SC_DATA_STACK_SIZE + 1));
+    TEST_ASSERT_TRUE(u_can_pop(SC_U_STACK_SIZE - 1));
+    TEST_ASSERT_FALSE(u_can_pop(SC_U_STACK_SIZE));
+    TEST_ASSERT_FALSE(u_can_pop(SC_U_STACK_SIZE + 1));
 
     u_push(333);
-    TEST_ASSERT_TRUE(u_can_pop(SC_DATA_STACK_SIZE));
-    TEST_ASSERT_FALSE(u_can_pop(SC_DATA_STACK_SIZE + 1));
+    TEST_ASSERT_TRUE(u_can_pop(SC_U_STACK_SIZE));
+    TEST_ASSERT_FALSE(u_can_pop(SC_U_STACK_SIZE + 1));
 }
 
-void testStackCanPush(void) {
+void testU_StackCanPush(void) {
     TEST_ASSERT_TRUE(u_can_push(0));
     TEST_ASSERT_TRUE(u_can_push(1));
-    TEST_ASSERT_TRUE(u_can_push(SC_DATA_STACK_SIZE));
-    TEST_ASSERT_FALSE(u_can_push(SC_DATA_STACK_SIZE + 1));
+    TEST_ASSERT_TRUE(u_can_push(SC_U_STACK_SIZE));
+    TEST_ASSERT_FALSE(u_can_push(SC_U_STACK_SIZE + 1));
 
     u_push(33);
-    TEST_ASSERT_TRUE(u_can_push(SC_DATA_STACK_SIZE - 1));
-    TEST_ASSERT_FALSE(u_can_push(SC_DATA_STACK_SIZE));
+    TEST_ASSERT_TRUE(u_can_push(SC_U_STACK_SIZE - 1));
+    TEST_ASSERT_FALSE(u_can_push(SC_U_STACK_SIZE));
 
-    for (int i = 1; i < SC_DATA_STACK_SIZE - 1; i += 1)
+    for (int i = 1; i < SC_U_STACK_SIZE - 1; i += 1)
         u_push(i + 33);
     TEST_ASSERT_TRUE(u_can_push(0));
     TEST_ASSERT_TRUE(u_can_push(1));
@@ -116,30 +112,30 @@ void testStackCanPush(void) {
     TEST_ASSERT_FALSE(u_can_push(1));
 }
 
-void testErrorPop(void) {
+void testU_ErrorPop(void) {
     u_pop();
-    TEST_ASSERT_EQUAL(SC_EXC_USER_STACK_UFLOW, sc_ctx->err);
+    TEST_ASSERT_EQUAL(SC_EXC_U_STACK_UFLOW, sc_ctx->err);
     sc_ctx->err = 0;
 }
-void testErrorPush(void) {
-    for (int i = 0; i < SC_DATA_STACK_SIZE; i += 1)
+void testU_ErrorPush(void) {
+    for (int i = 0; i < SC_U_STACK_SIZE; i += 1)
         u_push(i + 33);
     u_push(1234);
-    TEST_ASSERT_EQUAL(SC_EXC_USER_STACK_OFLOW, sc_ctx->err);
+    TEST_ASSERT_EQUAL(SC_EXC_U_STACK_OFLOW, sc_ctx->err);
     sc_ctx->err = 0;
 }
-void testErrorTos(void) {
+void testU_ErrorTos(void) {
     (void)u_tos;
-    TEST_ASSERT_EQUAL(SC_EXC_USER_STACK_ACCESS, sc_ctx->err);
+    TEST_ASSERT_EQUAL(SC_EXC_U_STACK_ACCESS, sc_ctx->err);
     sc_ctx->err = 0;
 }
-void testErrorNos(void) {
+void testU_ErrorNos(void) {
     u_push(1234);
     (void)u_nos;
-    TEST_ASSERT_EQUAL(SC_EXC_USER_STACK_ACCESS, sc_ctx->err);
+    TEST_ASSERT_EQUAL(SC_EXC_U_STACK_ACCESS, sc_ctx->err);
     sc_ctx->err = 0;
 }
-void testErrorPeek(void) {
+void testU_ErrorPeek(void) {
     u_push(1234);
     u_push(34234);
     u_push(444);
@@ -147,7 +143,7 @@ void testErrorPeek(void) {
     (void)u_peek(2);
     TEST_ASSERT_EQUAL(SC_EXC_OK, sc_ctx->err);
     (void)u_peek(3);
-    TEST_ASSERT_EQUAL(SC_EXC_USER_STACK_ACCESS, sc_ctx->err);
+    TEST_ASSERT_EQUAL(SC_EXC_U_STACK_ACCESS, sc_ctx->err);
     sc_ctx->err = 0;
 }
 

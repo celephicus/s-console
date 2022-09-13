@@ -186,6 +186,14 @@ void testOverrun2() {
 	TEST_ASSERT_EQUAL(0, val);
 }
 
+void testBadOpcode() {
+	code[0] = 0xff; 
+	
+	TEST_ASSERT_EQUAL(ERR_BAD_OPCODE, vmRun(1));	// Opcode OK, but loads from IP which is now out of memory.
+	TEST_ASSERT_EQUAL(1, IP);	
+	TEST_ASSERT_EQUAL(0, val);
+}
+
 #if 0
 TT_IGNORE_FROM_HERE()
 

@@ -14,7 +14,6 @@
 
 
 /*** Stuff copied from test files (should be #include's, declarations & macros only) ***/
-//#include "testOne.h"
 enum { // Error codes...
 	ERR_OK, 		// No error.
 	ERR_MEM,		// access out of memory space. 
@@ -36,18 +35,18 @@ enum { // Instructions...
 
 /*** External test functions scraped from test files. ***/
 void testInitContext(void);
-void testStackInit(void);
-void testStackPopPush(void);
-void testStackReset(void);
-void testStackPeek(void);
-void testStackTosNos(void);
-void testStackCanPop(void);
-void testStackCanPush(void);
-void testErrorPop(void);
-void testErrorPush(void);
-void testErrorTos(void);
-void testErrorNos(void);
-void testErrorPeek(void);
+void testR_StackInit(void);
+void testR_StackPopPush(void);
+void testR_StackReset(void);
+void testR_StackPeek(void);
+void testR_StackTosNos(void);
+void testR_StackCanPop(void);
+void testR_StackCanPush(void);
+void testR_ErrorPop(void);
+void testR_ErrorPush(void);
+void testR_ErrorTos(void);
+void testR_ErrorNos(void);
+void testR_ErrorPeek(void);
 void testVmRunNone();
 void testVmErrorOp(uint8_t op, uint8_t err);
 void testInc();
@@ -55,6 +54,19 @@ void testInc2();
 void testLiteral();
 void testOverrun1();
 void testOverrun2();
+void testBadOpcode();
+void testU_StackInit(void);
+void testU_StackPopPush(void);
+void testU_StackReset(void);
+void testU_StackPeek(void);
+void testU_StackTosNos(void);
+void testU_StackCanPop(void);
+void testU_StackCanPush(void);
+void testU_ErrorPop(void);
+void testU_ErrorPush(void);
+void testU_ErrorTos(void);
+void testU_ErrorNos(void);
+void testU_ErrorPeek(void);
 
 /*** Fixture & dump functions from test files. ***/
 void ts_SetupStackTestContext(void);
@@ -101,20 +113,20 @@ int main(int argc, char** argv) {
   do_run_test(testInitContext, "testInitContext", 13);
   registerFixture(NULL, NULL, NULL);
   
-  UnitySetTestFile("..\test_stack.c");
+  UnitySetTestFile("..\test_r_stack.c");
   registerFixture(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);
-  do_run_test(testStackInit, "testStackInit", 17);
-  do_run_test(testStackPopPush, "testStackPopPush", 27);
-  do_run_test(testStackReset, "testStackReset", 40);
-  do_run_test(testStackPeek, "testStackPeek", 54);
-  do_run_test(testStackTosNos, "testStackTosNos", 62);
-  do_run_test(testStackCanPop, "testStackCanPop", 73);
-  do_run_test(testStackCanPush, "testStackCanPush", 97);
-  do_run_test(testErrorPop, "testErrorPop", 118);
-  do_run_test(testErrorPush, "testErrorPush", 123);
-  do_run_test(testErrorTos, "testErrorTos", 130);
-  do_run_test(testErrorNos, "testErrorNos", 135);
-  do_run_test(testErrorPeek, "testErrorPeek", 141);
+  do_run_test(testR_StackInit, "testR_StackInit", 13);
+  do_run_test(testR_StackPopPush, "testR_StackPopPush", 23);
+  do_run_test(testR_StackReset, "testR_StackReset", 36);
+  do_run_test(testR_StackPeek, "testR_StackPeek", 50);
+  do_run_test(testR_StackTosNos, "testR_StackTosNos", 58);
+  do_run_test(testR_StackCanPop, "testR_StackCanPop", 69);
+  do_run_test(testR_StackCanPush, "testR_StackCanPush", 93);
+  do_run_test(testR_ErrorPop, "testR_ErrorPop", 114);
+  do_run_test(testR_ErrorPush, "testR_ErrorPush", 119);
+  do_run_test(testR_ErrorTos, "testR_ErrorTos", 126);
+  do_run_test(testR_ErrorNos, "testR_ErrorNos", 131);
+  do_run_test(testR_ErrorPeek, "testR_ErrorPeek", 137);
   registerFixture(NULL, NULL, NULL);
   
   UnitySetTestFile("..\test_toy_vm.c");
@@ -127,6 +139,23 @@ int main(int argc, char** argv) {
   do_run_test(testLiteral, "testLiteral", 152);
   do_run_test(testOverrun1, "testOverrun1", 166);
   do_run_test(testOverrun2, "testOverrun2", 179);
+  do_run_test(testBadOpcode, "testBadOpcode", 188);
+  registerFixture(NULL, NULL, NULL);
+  
+  UnitySetTestFile("..\test_u_stack.c");
+  registerFixture(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);
+  do_run_test(testU_StackInit, "testU_StackInit", 13);
+  do_run_test(testU_StackPopPush, "testU_StackPopPush", 23);
+  do_run_test(testU_StackReset, "testU_StackReset", 36);
+  do_run_test(testU_StackPeek, "testU_StackPeek", 50);
+  do_run_test(testU_StackTosNos, "testU_StackTosNos", 58);
+  do_run_test(testU_StackCanPop, "testU_StackCanPop", 69);
+  do_run_test(testU_StackCanPush, "testU_StackCanPush", 93);
+  do_run_test(testU_ErrorPop, "testU_ErrorPop", 114);
+  do_run_test(testU_ErrorPush, "testU_ErrorPush", 119);
+  do_run_test(testU_ErrorTos, "testU_ErrorTos", 126);
+  do_run_test(testU_ErrorNos, "testU_ErrorNos", 131);
+  do_run_test(testU_ErrorPeek, "testU_ErrorPeek", 137);
   registerFixture(NULL, NULL, NULL);
 
   return UnityEnd();

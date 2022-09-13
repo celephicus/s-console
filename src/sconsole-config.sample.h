@@ -6,19 +6,20 @@
 // Our little language only works with one integral type, called a "cell" like FORTH. Usually it is the natural int for the part. For Arduino this is 16 bits. 
 // Define to allow different types for the 'cell'. console_cell_t must be a signed type, console_ucell_t must be unsigned, and they must both be the same size.
 #include <stdint.h>
-typedef int32_t  console_cell_t;
-typedef uint32_t console_ucell_t;
+typedef int32_t  sc_cell_t;
+typedef uint32_t sc_ucell_t;
 
 // For unit test we want printf format for signed cell.
-#define CONSOLE_FORMAT_CELL "ld"
+#define SC_FORMAT_CELL "ld"
 
-// Stack size, we don't need much.
-#define CONSOLE_DATA_STACK_SIZE (8)
+// User stack size, we don't need much.
+#define SC_U_STACK_SIZE (8)
+#define SC_R_STACK_SIZE (4)
 
 // Input buffer size
-#define CONSOLE_INPUT_BUFFER_SIZE 40
+#define SC_INPUT_BUFFER_SIZE 40
 
 // Character to signal EOL for input string.
-#define CONSOLE_INPUT_NEWLINE_CHAR '\r'
+#define SC_INPUT_NEWLINE_CHAR '\r'
 
 #endif // CONSOLE_CONFIG_LOCAL_H__

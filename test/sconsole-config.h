@@ -11,8 +11,8 @@ typedef int32_t  sc_cell_t;
 typedef uint32_t sc_ucell_t;
 
 // Stack size, we don't need much.
-#define SC_DATA_STACK_SIZE (8)
-#define SC_RETURN_STACK_SIZE (8)
+#define SC_U_STACK_SIZE (8)
+#define SC_R_STACK_SIZE (4)
 
 // Heap space in RAM, again we don't need much, 256 bytes is a good start.
 #define SC_HEAP_SIZE 256

@@ -1,36 +1,268 @@
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include "unity.h"
+
+// A play VM for trying out ideas.
+#define VM_CODE_SIZE 10
+static uint8_t val; 
+static uint8_t code[VM_CODE_SIZE];
+static uint8_t IP;			// Instruction pointer, indexes into code.
+static uint8_t ERR;		// Error indicator.
+
+TT_BEGIN_INCLUDE()
+enum { // Error codes...
+	ERR_OK, 		// No error.
+	ERR_MEM,		// access out of memory space. 
+	ERR_HALT,		// HALT instruction.
+	ERR_FAULT,		// FAULT instruction.
+	ERR_VAL,
+	ERR_BAD_OPCODE,	
+	ERR_BAD_IP,		// IP outside of memory space.
+	
+};
+
+enum { // Instructions...
+	OP_HALT,	// Halt execution, return ERR_HALT.
+	OP_FAULT,	// Generates error ERR_FAULT.
+	OP_INC,		// Increments val.
+	OP_X,		// Sets error ERR_VAL is val is odd, else adds 10 to it.
+	OP_LIT,		// Loads next value into val, but sets error ERR_MEM if value is odd.
+};
+TT_END_INCLUDE()
+
+// Used in the VM to check if an error has been set, and jump to err if it has. 
+#define CHECK_ERR(op_) do { op_; if (ERR) goto err; } while (0)
+
+// Used in the VM to set an error, and jump to err. 
+#define SET_ERR(err_) do { ERR = (err_); goto err; } while (0)
+
+// Read the VM's tiny little memory.
+static uint8_t mem8rd(uint8_t addr) {
+	if (addr >= sizeof(code)) { ERR = ERR_MEM; return -1; }
+	return code[addr];
+}	
+
+// Read the VM's memory pointed to be IP. On error this sets a different error of IP out of range.
+static uint8_t mem8rd_ip() {
+	uint8_t addr = IP++;
+	if (addr >= sizeof(code)) { ERR = ERR_BAD_IP; return -1; }
+	return code[addr];
+}	
+
+#define ELEMENT_COUNT(x_) (sizeof(x_) / sizeof(x_[0]))
+
+// Run instructions through the VM until either  n instructions (if n positive) or an error is set or HALT is executed.
+static uint8_t vmRun(int n) {
+	static void* OPS[] = { &&op_halt, &&op_fault, &&op_inc, &&op_x, &&op_lit, };
+    uint8_t c;          // Scarthpad for words.
+
+	if (ERR) 			// Cannot run in error state.
+		return ERR;
+		
+next: 
+	if (0 == n) 	// Zero instructions to do so exit.
+		return ERR_OK;
+	if (n > 0)	// Only for non-negative n: count instructions then exit when we have done our quota. 
+		n -= 1;
+    
+    uint8_t op;
+	// last_ip = IP;	// Store last IP to restore it on error.
+	CHECK_ERR(op = mem8rd_ip());	// Load opcode, increment IP,  maybe flag IP out of range. 
+	
+	if (op >= ELEMENT_COUNT(OPS))	// Illegal opcode.
+		SET_ERR(ERR_BAD_OPCODE);
+		
+	goto *OPS[op];				// Jump to code snippets to do words. 
+	
+err:	
+	// IP = last_ip;	// Restore IP on error.
+	return ERR;
+
+// Words in snippet form.	
+op_halt: SET_ERR(ERR_HALT);
+op_fault: SET_ERR(ERR_FAULT);
+op_inc: val += 1; goto next;
+op_x: if (val & 1) SET_ERR(ERR_VAL); else val += 10; goto next;
+op_lit: CHECK_ERR(c = mem8rd_ip()); if (c&1) SET_ERR(ERR_VAL); val = c; goto next;
+}
+
+void vmInit() {
+	memset(code, 0xee, sizeof(code));
+	IP = 0;
+	val = 0;
+	ERR = ERR_OK;		// Clear error. 
+}
+
+TT_BEGIN_FIXTURE(vmInit, NULL, NULL);
+
+void testVmRunNone() {
+	TEST_ASSERT_EQUAL(ERR_OK, vmRun(0));
+	TEST_ASSERT_EQUAL(0, IP);
+	TEST_ASSERT_EQUAL(0, val);
+}
+
+void testVmErrorOp(uint8_t op, uint8_t err) {
+	code[0] = op; code[1] = OP_INC;
+	
+	TEST_ASSERT_EQUAL(err, vmRun(10));
+	TEST_ASSERT_EQUAL(1, IP);
+	TEST_ASSERT_EQUAL(0, val);
+	
+	// Nothing should happen as VM has error set. 
+	TEST_ASSERT_EQUAL(err, vmRun(10));
+	TEST_ASSERT_EQUAL(1, IP);
+	TEST_ASSERT_EQUAL(0, val);
+}
+TT_TEST_CASE(testVmErrorOp(OP_HALT, ERR_HALT))
+TT_TEST_CASE(testVmErrorOp(OP_FAULT, ERR_FAULT))
+
+static void build_n_incs(int n) {
+	memset(code, OP_INC, n);
+	code[n] = OP_HALT;
+}
+void testInc() {
+	build_n_incs(6);
+	
+	TEST_ASSERT_EQUAL(ERR_OK, vmRun(1));
+	TEST_ASSERT_EQUAL(1, IP);	
+	TEST_ASSERT_EQUAL(1, val);
+
+	TEST_ASSERT_EQUAL(ERR_OK, vmRun(2));
+	TEST_ASSERT_EQUAL(3, IP);	
+	TEST_ASSERT_EQUAL(3, val);
+
+	TEST_ASSERT_EQUAL(ERR_HALT, vmRun(-1));
+	TEST_ASSERT_EQUAL(7, IP);	
+}
+
+void testInc2() {
+	code[0] = code[1] = OP_INC;
+	code[2] = OP_HALT;
+	
+	TEST_ASSERT_EQUAL(ERR_OK, vmRun(2));
+	TEST_ASSERT_EQUAL(2, IP);	
+	TEST_ASSERT_EQUAL(2, val);
+
+	TEST_ASSERT_EQUAL(ERR_HALT, vmRun(1));
+	TEST_ASSERT_EQUAL(3, IP);	
+}
+
+void testLiteral() {
+	code[0] = OP_LIT;
+	
+	code[1] = 1;	// Load odd number to set error.
+	TEST_ASSERT_EQUAL(ERR_VAL, vmRun(1));
+	TEST_ASSERT_EQUAL(2, IP);	
+	TEST_ASSERT_EQUAL(0, val);
+	
+	code[1] = 122; IP = ERR = 0;	// Load evn number is OK.
+	TEST_ASSERT_EQUAL(ERR_OK, vmRun(1));
+	TEST_ASSERT_EQUAL(2, IP);	
+	TEST_ASSERT_EQUAL(122, val);
+}
+
+void testOverrun1() {
+	code[VM_CODE_SIZE-1] = OP_INC;
+	IP = VM_CODE_SIZE-1;
+	
+	TEST_ASSERT_EQUAL(ERR_OK, vmRun(1));		// Run last instruction OK.
+	TEST_ASSERT_EQUAL(VM_CODE_SIZE, IP);	
+	TEST_ASSERT_EQUAL(1, val);
+	
+	TEST_ASSERT_EQUAL(ERR_BAD_IP, vmRun(1));		// Now should fault as outside memory space.
+	TEST_ASSERT_EQUAL(VM_CODE_SIZE+1, IP);	
+	TEST_ASSERT_EQUAL(1, val);
+}
+
+void testOverrun2() {
+	code[VM_CODE_SIZE-1] = OP_LIT; 
+	IP = VM_CODE_SIZE-1;
+	
+	TEST_ASSERT_EQUAL(ERR_BAD_IP, vmRun(1));	// Opcode OK, but loads from IP which is now out of memory.
+	TEST_ASSERT_EQUAL(VM_CODE_SIZE+1, IP);	// Increment IP by 2 for literal.
+	TEST_ASSERT_EQUAL(0, val);
+}
+
+#if 0
+TT_IGNORE_FROM_HERE()
+
+
+#define r_pop() (*--ctx->rp)
+#define SET_IP(ip_) do { if (!isIpValid(ip_)) { err = ERR_IP_INVALID; goto err; } else IP = (ip_)} while (0)
+#define CHECK_ERR(op_) do { op_; if (ctx->err) goto err; } while (0)
+
+#define r_pop() (r_can_pop(1) ? (*--ctx->rp) : (ctx->err = ERR_R_UND, -1)
+// Rule: IP always points to the next instruction if no error. Else it points to the word that caused the error. 
+
+op_halt:  SET_ERR(HALT); /*  goto next; not required */
+op_ret: CHECK_ERR(a = r_pop()); SET_IP(a); goto next;
+op_ERR: SET_ERR(u_pop());		.
+		.
+		.
+	static void* OPS[] = { op_halt, op_ret, ... };
+	
+	uint8_t op;
+	
+	 842 1352 1862
+	 
+next: 
+	if ((n > 0) && (0 == --n))
+		return 0;
+	CHECK_ERR(op = mem8rd(*IP++));
+	if (op & 0x80) {
+		CHECK_ERR(uint16_t a = (uint16_t)(op & ~0x80) | (uint16_t) mem8rd(*IP++));
+		r_push(IP);
+		SET_IP(a);
+		goto next;
+	}
+	if (op >= ELEMENTS(OPS))
+		SET_ERR(BAD_OPCODE);
+		
+	goto *OPS[op];
+	
+err:	
+	return err;
 # Source file thst defines the commands for sconsole.
 
 # We only have two commands, PRIMOP & COMMAND.
 # Primops are defined as a fragment of "C" code, commands are composed from primops and other words.
 
+typedef int16_t sc_cell_t;
 
-/* Some helper functions & macros for commands. */
-#define binop(op_) { sc_cell_t a = u_pop(); u_tos = u_tos op_ a; } 
-#define unop(op_) u_tos = op_ u_tos; }
+typedef struct {
+	sc_cell_t ustack[CONSOLE_USER_STACK_SIZE];
+	sc_cell_t* sp;
+	sc_cell_t err;		// Set non-zero on error.
+}
 
-// Execute at most count instructions. If count if negative then run forever.
-// Will return on a `yield' instruction. 
-// Returns number of instructions actually run.
-int execute(sc_context_t* ctx, int count) {
+#define u_pop() (*(CONTEXT.sp++))
+#define u_push(x_) *--CONTEXT.sp = (sc_cell_t)(x_)
+#define u_stackbase (&CONTEXT.ustack[CONSOLE_USER_STACK_SIZE])
+#define u_clear() CONTEXT.sp = &ustack[CONSOLE_USER_STACK_SIZE]
+#define u_tos() *CONTEXT.sp
+#define u_depth() (&ustack[CONSOLE_USER_STACK_SIZE] - g_consoleContext.sp)
+
+void execute(sc_context_t* ctx, int count) {
 	while (1) {
 	}
 }
-
-void set_error(int err) { ctx->error = err; }
-
+>R: "Execution: ( x -- ) ( R: -- x )"
 # Functions available to primops:
-#  User stack: u_clear(), u_pop(), u_push(), u_tos
+#  User stack: u_clear(), u_pop(), u_push(), u_tos()
 #  Return stack: r_clear(), r_pop(), p_push(), r_tos()
 #  IP: instruction pointer, points to byte,
 
-PRIMOP (return) "( - ) r( addr - ) Pop return address off r-stack and load IP." [0] { IP = r_pop(); }
+PRIMOP (ret) [r_pop(1)] "R( addr - ) Pop return address off r-stack and load IP." { IP = r_pop(); }
+PRIMOP (lit8)	[push(1)]	"( - v8) Pushes next byte in instruction stream." [1, hide] { uint8_t b = memget8(IP++); push(); }
 
 PRIMOP	event	"( u16: payload u8:id - ) Send event up to PC containing top stack value"  [-2] {
         int8_t id = pop();
         int16_t val = pop();
         event(id, val);
     }
-PRIMOP 	lit8	"( - v8) Pushes next byte in instruction stream." [1, hide] { push(memget8(IP++)); }
 PRIMOP 	lit16	"( - v8) Pushes next word in instruction stream." [1, hide] { push(memget16(IP)); IP += 2; }
 PRIMOP 	quote	"( - addr) Reads length from IP, pushes address of next instruction, increments IP by length." [-1, hide] {
         uint8_t len = memget(IP++);
@@ -75,15 +307,15 @@ PRIMOP  1+		"(v:arg - v:result) Negate value" [-1] { tos() = tos() + 1; }
 PRIMOP  1-		"(v:arg - v:result) Negate value" [-1] { tos() = tos() - 1; }
 
 PRIMOP 	drop	"(v*n - n*(n-1)) Discard top value." [-1] { u_drop(); }
-PRIMOP 	dup 	"(... n - ... n n) Duplicate top value." [-1, 1] { u_push(u_tos); }
+PRIMOP 	dup 	"(... n - ... n n) Duplicate top value." [-1, 1] { u_push(u_tos()); }
 PRIMOP 	swap 	"(n1 n2 - n2 n1) Swap two top value.s" [-2] {
-        int16_t t = u_tos;
+        int16_t t = u_tos(), n = u_nos();
         u_tos = u_nos(); u_nos = t;
     }
 PRIMOP pick 	"( n -- v)	Copy nth item to top of stack." [] {
         int16_t n = pop();
 		verify_stack(n);
-        u_push(u_peek(n));
+        u_push(u_pick(n));
     }
 PRIMOP roll		"(n -- ) Rotate stack so that top item slipped into nth position." [] {
         int16_t n = pop();
@@ -97,7 +329,7 @@ PRIMOP roll		"(n -- ) Rotate stack so that top item slipped into nth position." 
         *s = t;
     }
 PRIMOP clear "( - <empty>) Clear stack." [] { u_clear(); }
-PRIMOP yield "( - ) Break execution to allow other threads to run." [] { set_error(SC_ERR_YIELD); }
+
 VAR here "( -- addr) Address of next free dictionary byte."
 int16_t here; // dictionary 'here' pointer
     int16_t last; // last definition address
@@ -120,20 +352,27 @@ int16_t here; // dictionary 'here' pointer
         //bind(14, sub);                       Subtract,              "-",                     14  // y x         - diff
         //bind(15, mul);                       Multiply,              "*",                     15  // y x         - prod
         //bind(16, div);                       Divide,                "/",                     16  // y x         - quot
-			//bind(17, mod);                       Modulus,               "mod",                   17  // y x         - rem
+        //bind(17, mod);                       Modulus,               "mod",                   17  // y x         - rem
         //bind(18, andb);                      And,                   "and",                   18  // y x         - result
         //bind(19, orb);                       Or,                    "or",                    19  // y x         - result
         //bind(20, xorb);                      ExclusiveOr,           "xor",                   20  // y x         - result
         //bind(21, shift);                     Shift,                 "shift",                 21  // x bits      - result
         //ind(22, eq);                        Equal,                 "=",                     22  // y x         - pred
-
+        bind(23, neq);                       NotEqual,              "<>",                    23  // y x         - pred
+        bind(24, gt);                        Greater,               ">",                     24  // y x         - pred
+        bind(25, geq);                       GreaterOrEqual,        ">=",                    25  // y x         - pred
+        bind(26, lt);                        Less,                  "<",                     26  // y x         - pred
+        bind(27, leq);                       LessOrEqual,           "<=",                    27  // y x         - pred
+        bind(28, notb);                      Not,                   "not",                   28  // x           - result
+        bind(29, neg);                       Negate,                "neg",                   29  // x           - -x
+        bind(30, inc);                       Increment,             "1+",                    30  // x           - x+1
+        bind(31, dec);                       Decrement,             "1-",                    31  // x           - x-1
         bind(32, drop);                      Drop,                  "drop",                  32  // x           -
         bind(33, dup);                       Duplicate,             "dup",                   33  // x           - x x
         bind(34, swap);                      Swap,                  "swap",                  34  // y x         - x y
         bind(35, pick);                      Pick,                  "pick",                  35  // n           - val
         bind(36, roll);                      Roll,                  "roll",                  36  // n           -
         bind(37, clr);                       Clear,                 "clear",                 37  //             -
-
         bind(38, pushr);                     Push,                  "push",                  38  // x           -   (to return)
         bind(39, popr);                      Pop,                   "pop",                   39  //             - x (from return)
         bind(40, peekr);                     Peek,                  "peek",                  40  //             - x (from return)
@@ -145,7 +384,6 @@ int16_t here; // dictionary 'here' pointer
         bind(46, setLoop);                   SetLoop,               "setLoop",               46  // addr        -
         bind(47, stopLoop);                  StopLoop,              "stopLoop",              47  //             -
         bind(48, resetBoard);                Reset,                 "(reset)",               48  //             -
-
         bind(49, pinMode);                   PinMode,               "pinMode",               49  // mode pin    -
         bind(50, digitalRead);               DigitalRead,           "digitalRead",           50  // pin         - val
         bind(51, digitalWrite);              DigitalWrite,          "digitalWrite",          51  // val pin     -
@@ -551,3 +789,4 @@ int16_t here; // dictionary 'here' pointer
         }
     }
 }
+#endif

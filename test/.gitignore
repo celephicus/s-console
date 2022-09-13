@@ -1,0 +1,6 @@
+**/.codelite/*
+**/.ctagsd/*
+**/build-Debug/*
+**/.clang-format
+**/.clangd
+

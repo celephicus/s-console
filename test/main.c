@@ -15,22 +15,18 @@
 
 /*** Stuff copied from test files (should be #include's, declarations & macros only) ***/
 enum { // Error codes...
-	ERR_OK, 		// No error.
-	ERR_MEM,		// access out of memory space. 
-	ERR_HALT,		// HALT instruction.
-	ERR_FAULT,		// FAULT instruction.
-	ERR_VAL,
-	ERR_BAD_OPCODE,	
-	ERR_BAD_IP,		// IP outside of memory space.
-	
+	FAULT_OK, 		// No fault.
+	FAULT_MEM,		// Access out of memory space. 
+	FAULT_BAD_OPCODE,	// Illegal opcode.
+	FAULT_BAD_IP,		// IP outside of memory space.
+	FAULT_USER		// User fault codes from here.
 };
 
 enum { // Instructions...
-	OP_HALT,	// Halt execution, return ERR_HALT.
-	OP_FAULT,	// Generates error ERR_FAULT.
+	OP_FAULT,	// Sets fault from next value in instruction stream.
 	OP_INC,		// Increments val.
-	OP_X,		// Sets error ERR_VAL is val is odd, else adds 10 to it.
-	OP_LIT,		// Loads next value into val, but sets error ERR_MEM if value is odd.
+	OP_LIT,		// Loads next value in instruction stream into val.
+	OP_LOAD,	// Load val from address in val.
 };
 
 /*** External test functions scraped from test files. ***/
@@ -48,10 +44,12 @@ void testR_ErrorTos(void);
 void testR_ErrorNos(void);
 void testR_ErrorPeek(void);
 void testVmRunNone();
-void testVmErrorOp(uint8_t op, uint8_t err);
+void testVmFaultOp();
 void testInc();
 void testInc2();
 void testLiteral();
+void testLoad();
+void testLoadBad();
 void testOverrun1();
 void testOverrun2();
 void testBadOpcode();
@@ -74,8 +72,7 @@ void ts_DestroyStackTestContext(void);
 void vmInit(void);
 
 /* Declare test stubs. */
-static void testVmErrorOp_stub_0(void) { testVmErrorOp(OP_HALT, ERR_HALT); }
-static void testVmErrorOp_stub_1(void) { testVmErrorOp(OP_FAULT, ERR_FAULT); }
+
 
 /*** Extra Unity support. ***/
 
@@ -132,14 +129,15 @@ int main(int argc, char** argv) {
   UnitySetTestFile("..\test_toy_vm.c");
   registerFixture(vmInit, NULL, NULL);
   do_run_test(testVmRunNone, "testVmRunNone", 100);
-  do_run_test(testVmErrorOp_stub_0, "testVmErrorOp(OP_HALT, ERR_HALT)", 118);
-  do_run_test(testVmErrorOp_stub_1, "testVmErrorOp(OP_FAULT, ERR_FAULT)", 119);
-  do_run_test(testInc, "testInc", 125);
-  do_run_test(testInc2, "testInc2", 140);
-  do_run_test(testLiteral, "testLiteral", 152);
-  do_run_test(testOverrun1, "testOverrun1", 166);
-  do_run_test(testOverrun2, "testOverrun2", 179);
-  do_run_test(testBadOpcode, "testBadOpcode", 188);
+  do_run_test(testVmFaultOp, "testVmFaultOp", 106);
+  do_run_test(testInc, "testInc", 123);
+  do_run_test(testInc2, "testInc2", 138);
+  do_run_test(testLiteral, "testLiteral", 149);
+  do_run_test(testLoad, "testLoad", 161);
+  do_run_test(testLoadBad, "testLoadBad", 169);
+  do_run_test(testOverrun1, "testOverrun1", 175);
+  do_run_test(testOverrun2, "testOverrun2", 188);
+  do_run_test(testBadOpcode, "testBadOpcode", 197);
   registerFixture(NULL, NULL, NULL);
   
   UnitySetTestFile("..\test_u_stack.c");

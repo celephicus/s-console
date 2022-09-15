@@ -10,170 +10,179 @@
 static uint8_t val; 
 static uint8_t code[VM_CODE_SIZE];
 static uint8_t IP;			// Instruction pointer, indexes into code.
-static uint8_t ERR;		// Error indicator.
+static uint8_t FAULT;		// Error indicator.
 
 TT_BEGIN_INCLUDE()
 enum { // Error codes...
-	ERR_OK, 		// No error.
-	ERR_MEM,		// access out of memory space. 
-	ERR_HALT,		// HALT instruction.
-	ERR_FAULT,		// FAULT instruction.
-	ERR_VAL,
-	ERR_BAD_OPCODE,	
-	ERR_BAD_IP,		// IP outside of memory space.
-	
+	FAULT_OK, 		// No fault.
+	FAULT_MEM,		// Access out of memory space. 
+	FAULT_BAD_OPCODE,	// Illegal opcode.
+	FAULT_BAD_IP,		// IP outside of memory space.
+	FAULT_USER		// User fault codes from here.
 };
 
 enum { // Instructions...
-	OP_HALT,	// Halt execution, return ERR_HALT.
-	OP_FAULT,	// Generates error ERR_FAULT.
+	OP_FAULT,	// Sets fault from next value in instruction stream.
 	OP_INC,		// Increments val.
-	OP_X,		// Sets error ERR_VAL is val is odd, else adds 10 to it.
-	OP_LIT,		// Loads next value into val, but sets error ERR_MEM if value is odd.
+	OP_LIT,		// Loads next value in instruction stream into val.
+	OP_LOAD,	// Load val from address in val.
 };
 TT_END_INCLUDE()
 
-// Used in the VM to check if an error has been set, and jump to err if it has. 
-#define CHECK_ERR(op_) do { op_; if (ERR) goto err; } while (0)
+// Used in the VM to check if an fault has been set, and jump to fault handler if it has. 
+#define CHECK_FAULT(op_) do { op_; if (FAULT) goto fault; } while (0)
 
-// Used in the VM to set an error, and jump to err. 
-#define SET_ERR(err_) do { ERR = (err_); goto err; } while (0)
+// Used in the VM to set an fault, and jump to fault handler. 
+#define SET_FAULT(err_) do { FAULT = (err_); goto fault; } while (0)
 
 // Read the VM's tiny little memory.
-static uint8_t mem8rd(uint8_t addr) {
-	if (addr >= sizeof(code)) { ERR = ERR_MEM; return -1; }
+	static uint8_t mem8rd(uint8_t addr) {
+	if (addr >= sizeof(code)) { FAULT = FAULT_MEM; return -1; }
 	return code[addr];
 }	
 
-// Read the VM's memory pointed to be IP. On error this sets a different error of IP out of range.
+// Read the VM's memory pointed to be IP. On fault this sets a different fault of IP out of range.
 static uint8_t mem8rd_ip() {
 	uint8_t addr = IP++;
-	if (addr >= sizeof(code)) { ERR = ERR_BAD_IP; return -1; }
+	if (addr >= sizeof(code)) { FAULT = FAULT_BAD_IP; return -1; }
 	return code[addr];
 }	
 
 #define ELEMENT_COUNT(x_) (sizeof(x_) / sizeof(x_[0]))
 
-// Run instructions through the VM until either  n instructions (if n positive) or an error is set or HALT is executed.
+// Run instructions through the VM until either  n instructions (if n positive) or an fault is set or HALT is executed.
 static uint8_t vmRun(int n) {
-	static void* OPS[] = { &&op_halt, &&op_fault, &&op_inc, &&op_x, &&op_lit, };
-    uint8_t c;          // Scarthpad for words.
-
-	if (ERR) 			// Cannot run in error state.
-		return ERR;
+	static void* OPS[] = { &&op_fault, &&op_inc, &&op_lit, &&op_load, };
+	uint8_t c;		// Scratchpad
+	
+	if (FAULT) 			// Cannot run in fault state.
+		return FAULT;
 		
 next: 
 	if (0 == n) 	// Zero instructions to do so exit.
-		return ERR_OK;
+		return FAULT_OK;
 	if (n > 0)	// Only for non-negative n: count instructions then exit when we have done our quota. 
 		n -= 1;
     
     uint8_t op;
-	// last_ip = IP;	// Store last IP to restore it on error.
-	CHECK_ERR(op = mem8rd_ip());	// Load opcode, increment IP,  maybe flag IP out of range. 
+	// last_ip = IP;	// Store last IP to restore it on fault.
+	CHECK_FAULT(op = mem8rd_ip());	// Load opcode, increment IP,  maybe flag IP out of range. 
 	
 	if (op >= ELEMENT_COUNT(OPS))	// Illegal opcode.
-		SET_ERR(ERR_BAD_OPCODE);
+		SET_FAULT(FAULT_BAD_OPCODE);
 		
 	goto *OPS[op];				// Jump to code snippets to do words. 
 	
-err:	
-	// IP = last_ip;	// Restore IP on error.
-	return ERR;
+fault:	
+	// IP = last_ip;	// Restore IP on fault.
+	return FAULT;
 
 // Words in snippet form.	
-op_halt: SET_ERR(ERR_HALT);
-op_fault: SET_ERR(ERR_FAULT);
+op_fault: CHECK_FAULT(c = mem8rd_ip()); SET_FAULT(c);
 op_inc: val += 1; goto next;
-op_x: if (val & 1) SET_ERR(ERR_VAL); else val += 10; goto next;
-op_lit: CHECK_ERR(c = mem8rd_ip()); if (c&1) SET_ERR(ERR_VAL); val = c; goto next;
+op_lit: CHECK_FAULT(val = mem8rd_ip()); goto next;
+op_load: CHECK_FAULT(val = mem8rd(val)); goto next;
 }
 
 void vmInit() {
 	memset(code, 0xee, sizeof(code));
 	IP = 0;
 	val = 0;
-	ERR = ERR_OK;		// Clear error. 
+	FAULT = FAULT_OK;		// Clear fault. 
 }
 
 TT_BEGIN_FIXTURE(vmInit, NULL, NULL);
 
+#define CODE(...)	do {									\
+	uint8_t x[] = { __VA_ARGS__ };							\
+	memcpy(code, x, ELEMENT_COUNT(x));						\
+} while (0)
+	
 void testVmRunNone() {
-	TEST_ASSERT_EQUAL(ERR_OK, vmRun(0));
+	TEST_ASSERT_EQUAL(FAULT_OK, vmRun(0));
 	TEST_ASSERT_EQUAL(0, IP);
 	TEST_ASSERT_EQUAL(0, val);
 }
 
-void testVmErrorOp(uint8_t op, uint8_t err) {
-	code[0] = op; code[1] = OP_INC;
+void testVmFaultOp() {
+	CODE(OP_FAULT, FAULT_USER, OP_INC);
 	
-	TEST_ASSERT_EQUAL(err, vmRun(10));
-	TEST_ASSERT_EQUAL(1, IP);
+	TEST_ASSERT_EQUAL(FAULT_USER, vmRun(10));
+	TEST_ASSERT_EQUAL(2, IP);
 	TEST_ASSERT_EQUAL(0, val);
 	
-	// Nothing should happen as VM has error set. 
-	TEST_ASSERT_EQUAL(err, vmRun(10));
-	TEST_ASSERT_EQUAL(1, IP);
+	// Nothing should happen as VM has fault set. 
+	TEST_ASSERT_EQUAL(FAULT_USER, vmRun(10));
+	TEST_ASSERT_EQUAL(2, IP);
 	TEST_ASSERT_EQUAL(0, val);
 }
-TT_TEST_CASE(testVmErrorOp(OP_HALT, ERR_HALT))
-TT_TEST_CASE(testVmErrorOp(OP_FAULT, ERR_FAULT))
 
 static void build_n_incs(int n) {
 	memset(code, OP_INC, n);
-	code[n] = OP_HALT;
+	code[n] = OP_FAULT; code[n+1] = FAULT_USER;
 }
 void testInc() {
 	build_n_incs(6);
 	
-	TEST_ASSERT_EQUAL(ERR_OK, vmRun(1));
+	TEST_ASSERT_EQUAL(FAULT_OK, vmRun(1));
 	TEST_ASSERT_EQUAL(1, IP);	
 	TEST_ASSERT_EQUAL(1, val);
 
-	TEST_ASSERT_EQUAL(ERR_OK, vmRun(2));
+	TEST_ASSERT_EQUAL(FAULT_OK, vmRun(2));
 	TEST_ASSERT_EQUAL(3, IP);	
 	TEST_ASSERT_EQUAL(3, val);
 
-	TEST_ASSERT_EQUAL(ERR_HALT, vmRun(-1));
-	TEST_ASSERT_EQUAL(7, IP);	
+	TEST_ASSERT_EQUAL(FAULT_USER, vmRun(-1));
+	TEST_ASSERT_EQUAL(6+2, IP);	
 }
 
 void testInc2() {
-	code[0] = code[1] = OP_INC;
-	code[2] = OP_HALT;
+	CODE(OP_INC, OP_INC, OP_FAULT, FAULT_USER);
 	
-	TEST_ASSERT_EQUAL(ERR_OK, vmRun(2));
+	TEST_ASSERT_EQUAL(FAULT_OK, vmRun(2));
 	TEST_ASSERT_EQUAL(2, IP);	
 	TEST_ASSERT_EQUAL(2, val);
 
-	TEST_ASSERT_EQUAL(ERR_HALT, vmRun(1));
-	TEST_ASSERT_EQUAL(3, IP);	
+	TEST_ASSERT_EQUAL(FAULT_USER, vmRun(1));
+	TEST_ASSERT_EQUAL(2+2, IP);	
 }
 
 void testLiteral() {
-	code[0] = OP_LIT;
+	CODE(OP_LIT, 122, OP_FAULT, FAULT_USER);
 	
-	code[1] = 1;	// Load odd number to set error.
-	TEST_ASSERT_EQUAL(ERR_VAL, vmRun(1));
-	TEST_ASSERT_EQUAL(2, IP);	
-	TEST_ASSERT_EQUAL(0, val);
-	
-	code[1] = 122; IP = ERR = 0;	// Load evn number is OK.
-	TEST_ASSERT_EQUAL(ERR_OK, vmRun(1));
+	TEST_ASSERT_EQUAL(FAULT_OK, vmRun(1));	// Load literal. 
 	TEST_ASSERT_EQUAL(2, IP);	
 	TEST_ASSERT_EQUAL(122, val);
+	
+	TEST_ASSERT_EQUAL(FAULT_USER, vmRun(-1));	// Fault.
+	TEST_ASSERT_EQUAL(2+2, IP);	
+	TEST_ASSERT_EQUAL(122, val);
+}
+
+void testLoad() {
+	CODE(OP_LIT, 6, OP_LOAD, OP_FAULT, FAULT_USER, 0, 122);
+	
+	TEST_ASSERT_EQUAL(FAULT_USER, vmRun(-1));
+	TEST_ASSERT_EQUAL(5, IP);	
+	TEST_ASSERT_EQUAL(122, val);
+}
+
+void testLoadBad() {
+	CODE(OP_LIT, 66, OP_LOAD, OP_FAULT, FAULT_USER, 0, 122);
+	TEST_ASSERT_EQUAL(FAULT_MEM, vmRun(-1));
+	TEST_ASSERT_EQUAL(3, IP);	
 }
 
 void testOverrun1() {
 	code[VM_CODE_SIZE-1] = OP_INC;
 	IP = VM_CODE_SIZE-1;
 	
-	TEST_ASSERT_EQUAL(ERR_OK, vmRun(1));		// Run last instruction OK.
+	TEST_ASSERT_EQUAL(FAULT_OK, vmRun(1));		// Run last instruction OK.
 	TEST_ASSERT_EQUAL(VM_CODE_SIZE, IP);	
 	TEST_ASSERT_EQUAL(1, val);
 	
-	TEST_ASSERT_EQUAL(ERR_BAD_IP, vmRun(1));		// Now should fault as outside memory space.
-	TEST_ASSERT_EQUAL(VM_CODE_SIZE+1, IP);	
+	TEST_ASSERT_EQUAL(FAULT_BAD_IP, vmRun(1));		// Now should fault as outside memory space.
+	TEST_ASSERT_EQUAL(VM_CODE_SIZE+1, IP);			// IP goes to next, which is also illegal. 
 	TEST_ASSERT_EQUAL(1, val);
 }
 
@@ -181,15 +190,15 @@ void testOverrun2() {
 	code[VM_CODE_SIZE-1] = OP_LIT; 
 	IP = VM_CODE_SIZE-1;
 	
-	TEST_ASSERT_EQUAL(ERR_BAD_IP, vmRun(1));	// Opcode OK, but loads from IP which is now out of memory.
-	TEST_ASSERT_EQUAL(VM_CODE_SIZE+1, IP);	// Increment IP by 2 for literal.
-	TEST_ASSERT_EQUAL(0, val);
+	TEST_ASSERT_EQUAL(FAULT_BAD_IP, vmRun(1));	// Opcode OK, but loads from IP which is now out of memory.
+	TEST_ASSERT_EQUAL(VM_CODE_SIZE+1, IP);		// IP goes to next, which is also illegal, so does not inrement again as is normal for LITx. 
+	// Value of val is now undefined. 
 }
 
 void testBadOpcode() {
-	code[0] = 0xff; 
+	CODE(0xff); 
 	
-	TEST_ASSERT_EQUAL(ERR_BAD_OPCODE, vmRun(1));	// Opcode OK, but loads from IP which is now out of memory.
+	TEST_ASSERT_EQUAL(FAULT_BAD_OPCODE, vmRun(1));	// Opcode OK, but loads from IP which is now out of memory.
 	TEST_ASSERT_EQUAL(1, IP);	
 	TEST_ASSERT_EQUAL(0, val);
 }
@@ -199,15 +208,15 @@ TT_IGNORE_FROM_HERE()
 
 
 #define r_pop() (*--ctx->rp)
-#define SET_IP(ip_) do { if (!isIpValid(ip_)) { err = ERR_IP_INVALID; goto err; } else IP = (ip_)} while (0)
-#define CHECK_ERR(op_) do { op_; if (ctx->err) goto err; } while (0)
+#define SET_IP(ip_) do { if (!isIpValid(ip_)) { err = FAULT_IP_INVALID; goto err; } else IP = (ip_)} while (0)
+#define CHECK_FAULT(op_) do { op_; if (ctx->err) goto err; } while (0)
 
-#define r_pop() (r_can_pop(1) ? (*--ctx->rp) : (ctx->err = ERR_R_UND, -1)
-// Rule: IP always points to the next instruction if no error. Else it points to the word that caused the error. 
+#define r_pop() (r_can_pop(1) ? (*--ctx->rp) : (ctx->err = FAULT_R_UND, -1)
+// Rule: IP always points to the next instruction if no fault. Else it points to the word that caused the fault. 
 
-op_halt:  SET_ERR(HALT); /*  goto next; not required */
-op_ret: CHECK_ERR(a = r_pop()); SET_IP(a); goto next;
-op_ERR: SET_ERR(u_pop());		.
+op_halt:  SET_FAULT(HALT); /*  goto next; not required */
+op_ret: CHECK_FAULT(a = r_pop()); SET_IP(a); goto next;
+op_FAULT: SET_FAULT(u_pop());		.
 		.
 		.
 	static void* OPS[] = { op_halt, op_ret, ... };
@@ -219,15 +228,15 @@ op_ERR: SET_ERR(u_pop());		.
 next: 
 	if ((n > 0) && (0 == --n))
 		return 0;
-	CHECK_ERR(op = mem8rd(*IP++));
+	CHECK_FAULT(op = mem8rd(*IP++));
 	if (op & 0x80) {
-		CHECK_ERR(uint16_t a = (uint16_t)(op & ~0x80) | (uint16_t) mem8rd(*IP++));
+		CHECK_FAULT(uint16_t a = (uint16_t)(op & ~0x80) | (uint16_t) mem8rd(*IP++));
 		r_push(IP);
 		SET_IP(a);
 		goto next;
 	}
 	if (op >= ELEMENTS(OPS))
-		SET_ERR(BAD_OPCODE);
+		SET_FAULT(BAD_OPCODE);
 		
 	goto *OPS[op];
 	
@@ -243,7 +252,7 @@ typedef int16_t sc_cell_t;
 typedef struct {
 	sc_cell_t ustack[CONSOLE_USER_STACK_SIZE];
 	sc_cell_t* sp;
-	sc_cell_t err;		// Set non-zero on error.
+	sc_cell_t err;		// Set non-zero on fault.
 }
 
 #define u_pop() (*(CONTEXT.sp++))
@@ -614,9 +623,9 @@ int16_t here; // dictionary 'here' pointer
 
     http://arduino.cc/en/Reference/AttachInterrupt
 
-    We keep a mapping of up to MAX_INTERRUPTS (6) words. */
+    We keep a mapping of up to MAX_INTFAULTUPTS (6) words. */
 
-    int16_t isrs[MAX_INTERRUPTS];
+    int16_t isrs[MAX_INTFAULTUPTS];
 
     void interrupt(int16_t n) // helper (not Brief instruction)
     {
@@ -732,8 +741,8 @@ int16_t here; // dictionary 'here' pointer
     interactive about it with `100 'delay instruction`. This is the extensibility story for Brief.
 
     Notice that custom instruction function may retrieve and return values via the
-    `brief::pop()` and `brief::push()` functions, as well as raise errors with
-    `brief::error(uint8_t code)`. */
+    `brief::pop()` and `brief::push()` functions, as well as raise faults with
+    `brief::fault(uint8_t code)`. */
 
     void setup()
     {
@@ -741,7 +750,7 @@ int16_t here; // dictionary 'here' pointer
         resetBoard();
 
 
-        for (int16_t i = 0; i < MAX_INTERRUPTS; i++)
+        for (int16_t i = 0; i < MAX_INTFAULTUPTS; i++)
         {
             isrs[i] = -1;
         }

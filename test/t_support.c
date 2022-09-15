@@ -20,16 +20,16 @@ void ts_DestroyScGlobals() {
 }
 void ts_SetupStackTestContext() {
     ts_SetupScGlobals();
-    sc_ctx = malloc(sizeof(sc_context_t));
-    memset(sc_ctx, 0xee, sizeof(sc_context_t));
-    scInitContext(sc_ctx);
-    sc_ctx->t_u_stack_pre = sc_ctx->t_u_stack_post = 0x12345678;
+    g_sc_ctx = malloc(sizeof(ScContext));
+    memset(g_sc_ctx, 0xee, sizeof(ScContext));
+    scInitContext(g_sc_ctx);
+    g_sc_ctx->t_u_stack_pre = g_sc_ctx->t_u_stack_post = 0x12345678;
 }
 void ts_DestroyStackTestContext() {
-    TEST_ASSERT_EQUAL(SC_EXC_OK, sc_ctx->err);
-    TEST_ASSERT_EQUAL_UINT32(0x12345678, sc_ctx->t_u_stack_pre);
-    TEST_ASSERT_EQUAL_UINT32(0x12345678, sc_ctx->t_u_stack_post);
-    free(sc_ctx);
-    sc_ctx = NULL;
+    TEST_ASSERT_EQUAL(SC_FAULT_OK, FAULT);
+    TEST_ASSERT_EQUAL_UINT32(0x12345678, g_sc_ctx->t_u_stack_pre);
+    TEST_ASSERT_EQUAL_UINT32(0x12345678, g_sc_ctx->t_u_stack_post);
+    free(g_sc_ctx);
+    g_sc_ctx = NULL;
     ts_DestroyScGlobals();
 }

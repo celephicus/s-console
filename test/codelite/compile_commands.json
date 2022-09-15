@@ -1,4 +1,8 @@
 [{
+  "file": "C:\\Users\\admin\\Documents\\git\\s-console\\test\\test_toy_vm.c",
+  "directory": "C:\\Users\\admin\\Documents\\git\\s-console\\test\\codelite",
+  "command": "C:/msys64/mingw64/bin/gcc.exe -c C:\\Users\\admin\\Documents\\git\\s-console\\test\\test_toy_vm.c -o C:\\Users\\admin\\Documents\\git\\s-console\\test\\test_toy_vm.c.o -target x86_64-w64-mingw32 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0\\x86_64-w64-mingw32 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0\\backward -IC:\\msys64\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\11.2.0\\include -IC:\\msys64\\mingw64\\include -IC:\\msys64\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\11.2.0\\include-fixed -IC:\\msys64\\mingw64\\x86_64-w64-mingw32\\include -DUNITY_INCLUDE_CONFIG_H -DTEST -I. -I../../src -I.. -I.  -g  -O0  -Wall"
+ }, {
   "file": "C:\\Users\\admin\\Documents\\git\\s-console\\src\\sconsole.h",
   "directory": "C:\\Users\\admin\\Documents\\git\\s-console\\test\\codelite",
   "command": "C:/msys64/mingw64/bin/g++.exe -c C:\\Users\\admin\\Documents\\git\\s-console\\src\\sconsole.h -o C:\\Users\\admin\\Documents\\git\\s-console\\src\\sconsole.h.o -target x86_64-w64-mingw32 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0\\x86_64-w64-mingw32 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0\\backward -IC:\\msys64\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\11.2.0\\include -IC:\\msys64\\mingw64\\include -IC:\\msys64\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\11.2.0\\include-fixed -IC:\\msys64\\mingw64\\x86_64-w64-mingw32\\include -DUNITY_INCLUDE_CONFIG_H -DTEST -I. -I../../src -I.. -I.  -g  -O0  -Wall"
@@ -10,6 +14,10 @@
   "file": "C:\\Users\\admin\\Documents\\git\\s-console\\src\\sconsole.c",
   "directory": "C:\\Users\\admin\\Documents\\git\\s-console\\test\\codelite",
   "command": "C:/msys64/mingw64/bin/gcc.exe -c C:\\Users\\admin\\Documents\\git\\s-console\\src\\sconsole.c -o C:\\Users\\admin\\Documents\\git\\s-console\\src\\sconsole.c.o -target x86_64-w64-mingw32 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0\\x86_64-w64-mingw32 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0\\backward -IC:\\msys64\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\11.2.0\\include -IC:\\msys64\\mingw64\\include -IC:\\msys64\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\11.2.0\\include-fixed -IC:\\msys64\\mingw64\\x86_64-w64-mingw32\\include -DUNITY_INCLUDE_CONFIG_H -DTEST -I. -I../../src -I.. -I.  -g  -O0  -Wall"
+ }, {
+  "file": "C:\\Users\\admin\\Documents\\git\\s-console\\test\\test_helpers.c",
+  "directory": "C:\\Users\\admin\\Documents\\git\\s-console\\test\\codelite",
+  "command": "C:/msys64/mingw64/bin/gcc.exe -c C:\\Users\\admin\\Documents\\git\\s-console\\test\\test_helpers.c -o C:\\Users\\admin\\Documents\\git\\s-console\\test\\test_helpers.c.o -target x86_64-w64-mingw32 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0\\x86_64-w64-mingw32 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0\\backward -IC:\\msys64\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\11.2.0\\include -IC:\\msys64\\mingw64\\include -IC:\\msys64\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\11.2.0\\include-fixed -IC:\\msys64\\mingw64\\x86_64-w64-mingw32\\include -DUNITY_INCLUDE_CONFIG_H -DTEST -I. -I../../src -I.. -I.  -g  -O0  -Wall"
  }, {
   "file": "C:\\Users\\admin\\Documents\\git\\s-console\\test\\test_r_stack.c",
   "directory": "C:\\Users\\admin\\Documents\\git\\s-console\\test\\codelite",
@@ -30,10 +38,6 @@
   "file": "C:\\Users\\admin\\Documents\\git\\s-console\\test\\main.c",
   "directory": "C:\\Users\\admin\\Documents\\git\\s-console\\test\\codelite",
   "command": "C:/msys64/mingw64/bin/gcc.exe -c C:\\Users\\admin\\Documents\\git\\s-console\\test\\main.c -o C:\\Users\\admin\\Documents\\git\\s-console\\test\\main.c.o -target x86_64-w64-mingw32 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0\\x86_64-w64-mingw32 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0\\backward -IC:\\msys64\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\11.2.0\\include -IC:\\msys64\\mingw64\\include -IC:\\msys64\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\11.2.0\\include-fixed -IC:\\msys64\\mingw64\\x86_64-w64-mingw32\\include -DUNITY_INCLUDE_CONFIG_H -DTEST -I. -I../../src -I.. -I.  -g  -O0  -Wall"
- }, {
-  "file": "C:\\Users\\admin\\Documents\\git\\s-console\\test\\test_toy_vm.c",
-  "directory": "C:\\Users\\admin\\Documents\\git\\s-console\\test\\codelite",
-  "command": "C:/msys64/mingw64/bin/gcc.exe -c C:\\Users\\admin\\Documents\\git\\s-console\\test\\test_toy_vm.c -o C:\\Users\\admin\\Documents\\git\\s-console\\test\\test_toy_vm.c.o -target x86_64-w64-mingw32 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0\\x86_64-w64-mingw32 -IC:\\msys64\\mingw64\\include\\c++\\11.2.0\\backward -IC:\\msys64\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\11.2.0\\include -IC:\\msys64\\mingw64\\include -IC:\\msys64\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\11.2.0\\include-fixed -IC:\\msys64\\mingw64\\x86_64-w64-mingw32\\include -DUNITY_INCLUDE_CONFIG_H -DTEST -I. -I../../src -I.. -I.  -g  -O0  -Wall"
  }, {
   "file": "C:\\Users\\admin\\Documents\\git\\s-console\\test\\t_support.c",
   "directory": "C:\\Users\\admin\\Documents\\git\\s-console\\test\\codelite",

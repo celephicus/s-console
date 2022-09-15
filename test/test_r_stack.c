@@ -13,8 +13,8 @@ TT_BEGIN_FIXTURE(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);
 
 void testR_StackInit(void) {
     // Check guards are contiguous. 
-    TEST_ASSERT_EQUAL_PTR(&sc_ctx->t_r_stack_pre+1, &sc_ctx->r_stack[0]);
-    TEST_ASSERT_EQUAL_PTR(&sc_ctx->t_r_stack_post-1, &sc_ctx->r_stack[SC_R_STACK_SIZE-1]);
+    TEST_ASSERT_EQUAL_PTR(&g_sc_ctx->t_r_stack_pre+1, &g_sc_ctx->r_stack[0]);
+    TEST_ASSERT_EQUAL_PTR(&g_sc_ctx->t_r_stack_post-1, &g_sc_ctx->r_stack[SC_R_STACK_SIZE-1]);
 
 	// Check stack initialised by fixture.
     TEST_ASSERT_EQUAL(0, r_depth());
@@ -114,26 +114,26 @@ void testR_StackCanPush(void) {
 
 void testR_ErrorPop(void) {
     r_pop();
-    TEST_ASSERT_EQUAL(SC_EXC_R_STACK_UFLOW, sc_ctx->err);
-    sc_ctx->err = 0;
+    TEST_ASSERT_EQUAL(SC_FAULT_R_STACK_UFLOW, FAULT);
+    FAULT = 0;
 }
 void testR_ErrorPush(void) {
     for (int i = 0; i < SC_R_STACK_SIZE; i += 1)
         r_push(i + 33);
     r_push(1234);
-    TEST_ASSERT_EQUAL(SC_EXC_R_STACK_OFLOW, sc_ctx->err);
-    sc_ctx->err = 0;
+    TEST_ASSERT_EQUAL(SC_FAULT_R_STACK_OFLOW, FAULT);
+    FAULT = 0;
 }
 void testR_ErrorTos(void) {
     (void)r_tos;
-    TEST_ASSERT_EQUAL(SC_EXC_R_STACK_ACCESS, sc_ctx->err);
-    sc_ctx->err = 0;
+    TEST_ASSERT_EQUAL(SC_FAULT_R_STACK_ACCESS, FAULT);
+    FAULT = 0;
 }
 void testR_ErrorNos(void) {
     r_push(1234);
     (void)r_nos;
-    TEST_ASSERT_EQUAL(SC_EXC_R_STACK_ACCESS, sc_ctx->err);
-    sc_ctx->err = 0;
+    TEST_ASSERT_EQUAL(SC_FAULT_R_STACK_ACCESS, FAULT);
+    FAULT = 0;
 }
 void testR_ErrorPeek(void) {
     r_push(1234);
@@ -141,10 +141,10 @@ void testR_ErrorPeek(void) {
     r_push(444);
     (void)r_peek(0);
     (void)r_peek(2);
-    TEST_ASSERT_EQUAL(SC_EXC_OK, sc_ctx->err);
+    TEST_ASSERT_EQUAL(SC_FAULT_OK, FAULT);
     (void)r_peek(3);
-    TEST_ASSERT_EQUAL(SC_EXC_R_STACK_ACCESS, sc_ctx->err);
-    sc_ctx->err = 0;
+    TEST_ASSERT_EQUAL(SC_FAULT_R_STACK_ACCESS, FAULT);
+    FAULT = 0;
 }
 
 

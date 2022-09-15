@@ -36,7 +36,7 @@ TT_END_INCLUDE()
 #define SET_FAULT(err_) do { FAULT = (err_); goto fault; } while (0)
 
 // Read the VM's tiny little memory.
-	static uint8_t mem8rd(uint8_t addr) {
+static uint8_t mem8rd(uint8_t addr) {
 	if (addr >= sizeof(code)) { FAULT = FAULT_MEM; return -1; }
 	return code[addr];
 }	

@@ -21,6 +21,9 @@ typedef uint32_t sc_ucell_t;
 #define SC_READ_ONLY_PHYS_START
 #define SC_READ_ONLY_SIZE 
 
+// For test suite we need a checker for cell values.
+#define TEST_ASSERT_EQUAL_SC_CELL TEST_ASSERT_EQUAL_INT32
+
 #if 0
 // For unit test we want printf format for signed cell.
 #define CONSOLE_FORMAT_CELL "ld"

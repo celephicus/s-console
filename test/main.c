@@ -14,6 +14,8 @@
 
 
 /*** Stuff copied from test files (should be #include's, declarations & macros only) ***/
+#define SCONSOLE_WANT_INTERNAL_DEFS
+#include "sconsole.h"
 enum { // Error codes...
 	FAULT_OK, 		// No fault.
 	FAULT_MEM,		// Access out of memory space. 
@@ -30,6 +32,12 @@ enum { // Instructions...
 };
 
 /*** External test functions scraped from test files. ***/
+void testHeapRamByte(sc_cell_t addr);
+void testHeapRamByteBadRead();
+void testHeapRamByteBadWrite();
+void testHeapRamCell(sc_cell_t addr);
+void testHeapRamCellBadRead();
+void testHeapRamCellBadWrite();
 void testInitContext(void);
 void testR_StackInit(void);
 void testR_StackPopPush(void);
@@ -72,7 +80,10 @@ void ts_DestroyStackTestContext(void);
 void vmInit(void);
 
 /* Declare test stubs. */
-
+static void testHeapRamByte_stub_0(void) { testHeapRamByte(0); }
+static void testHeapRamByte_stub_1(void) { testHeapRamByte(SC_HEAP_SIZE-1); }
+static void testHeapRamCell_stub_2(void) { testHeapRamCell(0); }
+static void testHeapRamCell_stub_3(void) { testHeapRamCell(SC_HEAP_SIZE-sizeof(sc_cell_t)); }
 
 /*** Extra Unity support. ***/
 
@@ -104,6 +115,18 @@ int main(int argc, char** argv) {
 		return rc_parse;
 */
   UnityBegin("");
+  
+  UnitySetTestFile("..\test_helpers.c");
+  registerFixture(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);
+  do_run_test(testHeapRamByte_stub_0, "testHeapRamByte(0)", 22);
+  do_run_test(testHeapRamByte_stub_1, "testHeapRamByte(SC_HEAP_SIZE-1)", 23);
+  do_run_test(testHeapRamByteBadRead, "testHeapRamByteBadRead", 25);
+  do_run_test(testHeapRamByteBadWrite, "testHeapRamByteBadWrite", 30);
+  do_run_test(testHeapRamCell_stub_2, "testHeapRamCell(0)", 43);
+  do_run_test(testHeapRamCell_stub_3, "testHeapRamCell(SC_HEAP_SIZE-sizeof(sc_cell_t))", 45);
+  do_run_test(testHeapRamCellBadRead, "testHeapRamCellBadRead", 47);
+  do_run_test(testHeapRamCellBadWrite, "testHeapRamCellBadWrite", 52);
+  registerFixture(NULL, NULL, NULL);
   
   UnitySetTestFile("..\test_init.c");
   registerFixture(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);

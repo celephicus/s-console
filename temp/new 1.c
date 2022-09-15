@@ -28,15 +28,7 @@ void u_drop() {
 #define SET_ERROR(_exc) return ctx->error = (_exc)
 #define CHECK_ERROR() if (error) return ctx->error
 
-/* Stack notation
-	f - Boolean flag, either all 1's or all 0's.
-	c - 8 bit character.
-    w - word, signed/unsigned integer.
-	n - signed integer.
-	u - unsigned integer.
-    d - double sized signed integer
-    ud - double sized unsigned integer
-	a - address
+/*
 */
 
 // Runs at most `n' instructions then return PENDING, or continuously if n is negative. HALT, YIELD or an error will return corresponding status.

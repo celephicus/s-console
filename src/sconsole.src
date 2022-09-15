@@ -1,7 +1,40 @@
-# Source file thst defines the commands for sconsole.
+# Source file that defines the commands for sconsole.
+# As you may have guessed, comments are preceded by a `#'. 
+# Commands begin in column 1, there are only a few of them.
+#
+# IGNORE ignores therest of the source file.
+#
+# PRIMOP defines a primitive operation as a snippet of "C" code that is generated as a line in the SCONSOLE_PRIMOPS macro. 
+# The macro is only included by sconsole.c as part of the VM, so refer to there for implementation details. 
+#
+# WORD defines a composite instruction composed from primops and other words. Their syntax is like an assembler.
+#  They generate a word definition in macro SCONSOLE_WORDS.
+#
+# Both have similar syntax:
+# PRIMOP 'stack-effect' "comment" [options]{ <c-code> }
+#
+# Stack effect is quite expressive:
+# User stack is shown as `( - )', return stack as `R( - )'.
+#	f - Boolean flag, either all 1's or all 0's. Only ever the OUTPUT of a word. 
+#	F - value taken as boolean false if zero, true otherwise, only used on input of a word. 
+#	c - 8 bit value.
+#   v - signed/unsigned integer.
+#	n - signed integer.
+#	u - unsigned integer.
+#   d - double sized signed integer.
+#   ud - double sized unsigned integer.
+#	a - 15 bit address in Sconsole's virtual memory.
+#
+# Options are a set of space separated tags. 
+#  option `hide' excludes the primop or word from the dictionary, usually because the compiler can generate the required call.
 
-# We only have two commands, PRIMOP & COMMAND.
-# Primops are defined as a fragment of "C" code, commands are composed from primops and other words.
+PRIMOP 	LIT8	'( - c)' "Pushes next byte in instruction stream." [hide] { c = CHECK_ERR(memget_char_ip()) console_u_push(c); }
+PRIMOP 	LIT16	'( - v)' "Pushes next cell in instruction stream." [hide] { v = CHECK_ERR(memget_cell_ip()) console_u_push(v); }
+
+IGNORE
+
+-This will be ignored!-
+
 
 
 /* Some helper functions & macros for commands. */
@@ -30,8 +63,6 @@ PRIMOP	event	"( u16: payload u8:id - ) Send event up to PC containing top stack 
         int16_t val = pop();
         event(id, val);
     }
-PRIMOP 	lit8	"( - v8) Pushes next byte in instruction stream." [1, hide] { push(memget8(IP++)); }
-PRIMOP 	lit16	"( - v8) Pushes next word in instruction stream." [1, hide] { push(memget16(IP)); IP += 2; }
 PRIMOP 	quote	"( - addr) Reads length from IP, pushes address of next instruction, increments IP by length." [-1, hide] {
         uint8_t len = memget(IP++);
         push(IP); // address of quotation

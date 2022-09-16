@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdlib.h>
 
 #define SCONSOLE_WANT_INTERNAL_DEFS
 #include "sconsole.h"
@@ -34,15 +35,18 @@ static sc_cell_t heap_read_cell_ip() {
 }
 
 // Used in the VM to check if an fault has been set, and jump to fault handler if it has. 
-#define CHECK_FAULT(op_) do { op_; if (FAULT) goto fault; } while (0)
+#define CHECK_FAULT(op_) do { op_; if (FAULT) goto f_a_u_l_t; } while (0)
 
 // Used in the VM to set an fault, and jump to fault handler. 
-#define SET_FAULT(err_) do { FAULT = (err_); goto fault; } while (0)
+#define SET_FAULT(err_) do { FAULT = (err_); goto f_a_u_l_t; } while (0)
 
 /* Some helper functions & macros for commands. */
-#define BINOP(op_) do { v = u_pop(); u_tos = u_tos op_ v; } while (0)
-#define UNOP(op_) do { u_tos = op_ u_tos; } while (0)
+#define BINOP(op_) do { VERIFY_U_CAN_POP(2); v = u_pop(); u_tos = u_tos op_ v; } while (0)
+#define UNOP(op_) do { VERIFY_U_CAN_POP(1); u_tos = op_ u_tos; } while (0)
 
+#define VERIFY_U_CAN_POP(n_) if (u_can_pop(n_)) {} else SET_FAULT(SC_FAULT_U_STACK_UFLOW)
+#define VERIFY_U_CAN_PUSH(n_) if (u_can_push(n_)) {} else SET_FAULT(SC_FAULT_U_STACK_OFLOW)
+	
 uint8_t scRun(int n) {
 	static const void* OPS[] = { SC_JUMPS };
 	uint8_t c;		// Scratchpad
@@ -66,7 +70,7 @@ next:
 		
 	goto *OPS[op];				// Jump to code snippets to do words. 
 	
-fault:	
+f_a_u_l_t:	
 	// IP = last_ip;	// Restore IP on fault.
 	return FAULT;
 

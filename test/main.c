@@ -46,11 +46,6 @@ void testR_StackPeek(void);
 void testR_StackTosNos(void);
 void testR_StackCanPop(void);
 void testR_StackCanPush(void);
-void testR_ErrorPop(void);
-void testR_ErrorPush(void);
-void testR_ErrorTos(void);
-void testR_ErrorNos(void);
-void testR_ErrorPeek(void);
 void testToyVmRunNone();
 void testToyVmFaultOp();
 void testToyVmInc();
@@ -62,22 +57,25 @@ void testToyVmOverrun1();
 void testToyVmOverrun2();
 void testToyVmBadOpcode();
 void testU_StackInit(void);
+void testU_StackSize(void);
 void testU_StackPopPush(void);
 void testU_StackReset(void);
 void testU_StackPeek(void);
 void testU_StackTosNos(void);
 void testU_StackCanPop(void);
 void testU_StackCanPush(void);
-void testU_ErrorPop(void);
-void testU_ErrorPush(void);
-void testU_ErrorTos(void);
-void testU_ErrorNos(void);
-void testU_ErrorPeek(void);
-void test_vm_setup();
 void testscRunNone();
 void testBadOpcode();
+void testVmRunFault();
+void testVmOpFault();
+void testVmOpFaultFail();
+void testUnop(uint8_t op, sc_cell_t a, sc_cell_t r);
+void testUnopFail(uint8_t op);
+void testBinop(uint8_t op, sc_cell_t a1, sc_cell_t a2, sc_cell_t r);
+void testBinopFail(uint8_t op, int n_args);
 void testByteLiteral();
 void testCellLiteral();
+void testSlashMod(sc_cell_t a1, sc_cell_t a2, sc_cell_t q, sc_cell_t r);
 
 /*** Fixture & dump functions from test files. ***/
 void ts_SetupStackTestContext(void);
@@ -85,13 +83,29 @@ void ts_DestroyStackTestContext(void);
 void setupTestInitFixture(void);
 void destroyTestInitFixture(void);
 void vmInit(void);
-void test_vm_setup(void);
+void setup_test_vm(void);
+void destroy_test_vm(void);
 
 /* Declare test stubs. */
 static void testHeapRamByte_stub_0(void) { testHeapRamByte(0); }
 static void testHeapRamByte_stub_1(void) { testHeapRamByte(SC_HEAP_SIZE-1); }
 static void testHeapRamCell_stub_2(void) { testHeapRamCell(0); }
 static void testHeapRamCell_stub_3(void) { testHeapRamCell(SC_HEAP_SIZE-sizeof(sc_cell_t)); }
+static void testUnop_stub_4(void) { testUnop(SC_OP_NEGATE, 0x12345678, -0x12345678); }
+static void testUnopFail_stub_5(void) { testUnopFail(SC_OP_NEGATE); }
+static void testUnop_stub_6(void) { testUnop(SC_OP_ZERO_EQUALS, 0, -1); }
+static void testUnop_stub_7(void) { testUnop(SC_OP_ZERO_EQUALS, -1, 0); }
+static void testUnop_stub_8(void) { testUnop(SC_OP_ZERO_EQUALS, 12345, 0); }
+static void testUnopFail_stub_9(void) { testUnopFail(SC_OP_ZERO_EQUALS); }
+static void testBinop_stub_10(void) { testBinop(SC_OP_MINUS, 0x12345678, -1, 0x12345679); }
+static void testBinopFail_stub_11(void) { testBinopFail(SC_OP_MINUS, 1); }
+static void testBinopFail_stub_12(void) { testBinopFail(SC_OP_MINUS, 0); }
+static void testBinop_stub_13(void) { testBinop(SC_OP_TIMES, 1234, 5678, 1234*5678); }
+static void testBinopFail_stub_14(void) { testBinopFail(SC_OP_TIMES, 1); }
+static void testBinopFail_stub_15(void) { testBinopFail(SC_OP_TIMES, 0); }
+static void testSlashMod_stub_16(void) { testSlashMod(38, 5, 38/5, 38%5); }
+static void testBinopFail_stub_17(void) { testBinopFail(SC_OP_SLASH_MOD, 1); }
+static void testBinopFail_stub_18(void) { testBinopFail(SC_OP_SLASH_MOD, 0); }
 
 /*** Extra Unity support. ***/
 
@@ -150,11 +164,6 @@ int main(int argc, char** argv) {
   do_run_test(testR_StackTosNos, "testR_StackTosNos", 59);
   do_run_test(testR_StackCanPop, "testR_StackCanPop", 70);
   do_run_test(testR_StackCanPush, "testR_StackCanPush", 94);
-  do_run_test(testR_ErrorPop, "testR_ErrorPop", 115);
-  do_run_test(testR_ErrorPush, "testR_ErrorPush", 120);
-  do_run_test(testR_ErrorTos, "testR_ErrorTos", 127);
-  do_run_test(testR_ErrorNos, "testR_ErrorNos", 132);
-  do_run_test(testR_ErrorPeek, "testR_ErrorPeek", 138);
   registerFixture(NULL, NULL, NULL);
   
   UnitySetTestFile("..\test_toy_vm.c");
@@ -174,26 +183,39 @@ int main(int argc, char** argv) {
   UnitySetTestFile("..\test_u_stack.c");
   registerFixture(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);
   do_run_test(testU_StackInit, "testU_StackInit", 14);
-  do_run_test(testU_StackPopPush, "testU_StackPopPush", 24);
-  do_run_test(testU_StackReset, "testU_StackReset", 37);
-  do_run_test(testU_StackPeek, "testU_StackPeek", 51);
-  do_run_test(testU_StackTosNos, "testU_StackTosNos", 59);
-  do_run_test(testU_StackCanPop, "testU_StackCanPop", 70);
-  do_run_test(testU_StackCanPush, "testU_StackCanPush", 94);
-  do_run_test(testU_ErrorPop, "testU_ErrorPop", 115);
-  do_run_test(testU_ErrorPush, "testU_ErrorPush", 120);
-  do_run_test(testU_ErrorTos, "testU_ErrorTos", 127);
-  do_run_test(testU_ErrorNos, "testU_ErrorNos", 132);
-  do_run_test(testU_ErrorPeek, "testU_ErrorPeek", 138);
+  do_run_test(testU_StackSize, "testU_StackSize", 24);
+  do_run_test(testU_StackPopPush, "testU_StackPopPush", 28);
+  do_run_test(testU_StackReset, "testU_StackReset", 41);
+  do_run_test(testU_StackPeek, "testU_StackPeek", 55);
+  do_run_test(testU_StackTosNos, "testU_StackTosNos", 63);
+  do_run_test(testU_StackCanPop, "testU_StackCanPop", 74);
+  do_run_test(testU_StackCanPush, "testU_StackCanPush", 98);
   registerFixture(NULL, NULL, NULL);
   
   UnitySetTestFile("..\test_vm.c");
-  do_run_test(test_vm_setup, "test_vm_setup", 12);
-  registerFixture(test_vm_setup, NULL, ts_DestroyStackTestContext);
-  do_run_test(testscRunNone, "testscRunNone", 18);
-  do_run_test(testBadOpcode, "testBadOpcode", 23);
-  do_run_test(testByteLiteral, "testByteLiteral", 31);
-  do_run_test(testCellLiteral, "testCellLiteral", 39);
+  registerFixture(setup_test_vm, NULL, destroy_test_vm);
+  do_run_test(testscRunNone, "testscRunNone", 32);
+  do_run_test(testBadOpcode, "testBadOpcode", 36);
+  do_run_test(testVmRunFault, "testVmRunFault", 41);
+  do_run_test(testVmOpFault, "testVmOpFault", 46);
+  do_run_test(testVmOpFaultFail, "testVmOpFaultFail", 52);
+  do_run_test(testByteLiteral, "testByteLiteral", 95);
+  do_run_test(testCellLiteral, "testCellLiteral", 105);
+  do_run_test(testUnop_stub_4, "testUnop(SC_OP_NEGATE, 0x12345678, -0x12345678)", 116);
+  do_run_test(testUnopFail_stub_5, "testUnopFail(SC_OP_NEGATE)", 117);
+  do_run_test(testUnop_stub_6, "testUnop(SC_OP_ZERO_EQUALS, 0, -1)", 120);
+  do_run_test(testUnop_stub_7, "testUnop(SC_OP_ZERO_EQUALS, -1, 0)", 121);
+  do_run_test(testUnop_stub_8, "testUnop(SC_OP_ZERO_EQUALS, 12345, 0)", 122);
+  do_run_test(testUnopFail_stub_9, "testUnopFail(SC_OP_ZERO_EQUALS)", 123);
+  do_run_test(testBinop_stub_10, "testBinop(SC_OP_MINUS, 0x12345678, -1, 0x12345679)", 126);
+  do_run_test(testBinopFail_stub_11, "testBinopFail(SC_OP_MINUS, 1)", 127);
+  do_run_test(testBinopFail_stub_12, "testBinopFail(SC_OP_MINUS, 0)", 128);
+  do_run_test(testBinop_stub_13, "testBinop(SC_OP_TIMES, 1234, 5678, 1234*5678)", 131);
+  do_run_test(testBinopFail_stub_14, "testBinopFail(SC_OP_TIMES, 1)", 132);
+  do_run_test(testBinopFail_stub_15, "testBinopFail(SC_OP_TIMES, 0)", 133);
+  do_run_test(testSlashMod_stub_16, "testSlashMod(38, 5, 38/5, 38%5)", 147);
+  do_run_test(testBinopFail_stub_17, "testBinopFail(SC_OP_SLASH_MOD, 1)", 148);
+  do_run_test(testBinopFail_stub_18, "testBinopFail(SC_OP_SLASH_MOD, 0)", 149);
   registerFixture(NULL, NULL, NULL);
 
   return UnityEnd();

@@ -17,6 +17,6 @@ void dumpTestContext();
 #define UNITY_PRINT_TEST_CONTEXT dumpTestContext
 
 // Pretty...
-#define UNITY_OUTPUT_COLOR
+// #define UNITY_OUTPUT_COLOR
 
 

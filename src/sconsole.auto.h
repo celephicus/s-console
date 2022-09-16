@@ -3,13 +3,29 @@
 #define SC_OPCODES \
 	SC_OP_LIT8,  \
 	SC_OP_LIT,  \
-	SC_OP__DASH_,  \
+	SC_OP_FAULT,  \
+	SC_OP_NEGATE,  \
+	SC_OP_ZERO_EQUALS,  \
+	SC_OP_INVERT,  \
+	SC_OP_INC,  \
+	SC_OP_DEC,  \
+	SC_OP_MINUS,  \
+	SC_OP_TIMES,  \
+	SC_OP_SLASH_MOD,  \
 
 #define SC_JUMPS \
-&&lit8, &&lit, &&_dash_
+&&lit8, &&lit, &&fault, &&negate, &&zero_equals, &&invert, &&inc, &&dec, &&minus, &&times, &&slash_mod
 
 #define SC_SNIPPETS \
-	lit8: CHECK_FAULT(c = heap_read_byte_ip()); u_push(c); goto next; \
-	lit: CHECK_FAULT(v = heap_read_cell_ip()); u_push(v); goto next; \
-	_dash_: UNOP(-); goto next; \
+	lit8: CHECK_FAULT(c = heap_read_byte_ip()); VERIFY_U_CAN_PUSH(1); u_push(c); goto next; \
+	lit: CHECK_FAULT(v = heap_read_cell_ip()); VERIFY_U_CAN_PUSH(1); u_push(v); goto next; \
+	fault: VERIFY_U_CAN_POP(1); SET_FAULT(u_pop()); goto next; \
+	negate: UNOP(-); goto next; \
+	zero_equals: VERIFY_U_CAN_POP(1); u_tos = u_tos ? 0 : -1; goto next; \
+	invert: VERIFY_U_CAN_POP(1); UNOP(~); goto next; \
+	inc: VERIFY_U_CAN_POP(1); u_tos += 1; goto next; \
+	dec: VERIFY_U_CAN_POP(1); u_tos -= 1; goto next; \
+	minus: BINOP(-); goto next; \
+	times: BINOP(*); goto next; \
+	slash_mod: VERIFY_U_CAN_POP(2); div_t r; r = div(u_nos, u_tos); u_tos = r.rem; u_nos = r.quot; goto next; \
 

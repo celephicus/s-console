@@ -4,17 +4,18 @@
 #include <stdlib.h>
 
 #include "unity.h"
-#include "t_support.h"
 
 #define SCONSOLE_WANT_INTERNAL_DEFS
 #include "sconsole.h"
+
+#include "t_support.h"
 
 TT_BEGIN_FIXTURE(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);
 
 void testR_StackInit(void) {
     // Check guards are contiguous. 
-    TEST_ASSERT_EQUAL_PTR(&g_sc_ctx->t_r_stack_pre+1, &g_sc_ctx->r_stack[0]);
-    TEST_ASSERT_EQUAL_PTR(&g_sc_ctx->t_r_stack_post-1, &g_sc_ctx->r_stack[SC_R_STACK_SIZE-1]);
+    TEST_ASSERT_EQUAL_PTR(&CTX->t_r_stack_pre+1, &CTX->r_stack[0]);
+    TEST_ASSERT_EQUAL_PTR(&CTX->t_r_stack_post-1, &CTX->r_stack[SC_R_STACK_SIZE-1]);
 
 	// Check stack initialised by fixture.
     TEST_ASSERT_EQUAL(0, r_depth());

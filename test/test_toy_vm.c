@@ -9,7 +9,7 @@
 #define VM_CODE_SIZE 10
 static uint8_t val; 
 static uint8_t code[VM_CODE_SIZE];
-static uint8_t IP;			// Instruction pointer, indexes into code.
+static uint8_t tvIP;			// Instruction pointer, indexes into code.
 static uint8_t FAULT;		// Error indicator.
 
 TT_BEGIN_INCLUDE()
@@ -17,7 +17,7 @@ enum { // Error codes...
 	FAULT_OK, 		// No fault.
 	FAULT_MEM,		// Access out of memory space. 
 	FAULT_BAD_OPCODE,	// Illegal opcode.
-	FAULT_BAD_IP,		// IP outside of memory space.
+	FAULT_BAD_tvIP,		// tvIP outside of memory space.
 	FAULT_USER		// User fault codes from here.
 };
 
@@ -41,10 +41,10 @@ static uint8_t mem8rd(uint8_t addr) {
 	return code[addr];
 }	
 
-// Read the VM's memory pointed to be IP. On fault this sets a different fault of IP out of range.
+// Read the VM's memory pointed to be tvIP. On fault this sets a different fault of tvIP out of range.
 static uint8_t mem8rd_ip() {
-	uint8_t addr = IP++;
-	if (addr >= sizeof(code)) { FAULT = FAULT_BAD_IP; return -1; }
+	uint8_t addr = tvIP++;
+	if (addr >= sizeof(code)) { FAULT = FAULT_BAD_tvIP; return -1; }
 	return code[addr];
 }	
 
@@ -65,8 +65,8 @@ next:
 		n -= 1;
     
     uint8_t op;
-	// last_ip = IP;	// Store last IP to restore it on fault.
-	CHECK_FAULT(op = mem8rd_ip());	// Load opcode, increment IP,  maybe flag IP out of range. 
+	// last_ip = tvIP;	// Store last tvIP to restore it on fault.
+	CHECK_FAULT(op = mem8rd_ip());	// Load opcode, increment tvIP,  maybe flag tvIP out of range. 
 	
 	if (op >= ELEMENT_COUNT(OPS))	// Illegal opcode.
 		SET_FAULT(FAULT_BAD_OPCODE);
@@ -74,7 +74,7 @@ next:
 	goto *OPS[op];				// Jump to code snippets to do words. 
 	
 fault:	
-	// IP = last_ip;	// Restore IP on fault.
+	// tvIP = last_ip;	// Restore tvIP on fault.
 	return FAULT;
 
 // Words in snippet form.	
@@ -86,7 +86,7 @@ op_load: CHECK_FAULT(val = mem8rd(val)); goto next;
 
 void vmInit() {
 	memset(code, 0xee, sizeof(code));
-	IP = 0;
+	tvIP = 0;
 	val = 0;
 	FAULT = FAULT_OK;		// Clear fault. 
 }
@@ -98,22 +98,22 @@ TT_BEGIN_FIXTURE(vmInit, NULL, NULL);
 	memcpy(code, x, ELEMENT_COUNT(x));						\
 } while (0)
 	
-void testVmRunNone() {
+void testToyVmRunNone() {
 	TEST_ASSERT_EQUAL(FAULT_OK, vmRun(0));
-	TEST_ASSERT_EQUAL(0, IP);
+	TEST_ASSERT_EQUAL(0, tvIP);
 	TEST_ASSERT_EQUAL(0, val);
 }
 
-void testVmFaultOp() {
+void testToyVmFaultOp() {
 	CODE(OP_FAULT, FAULT_USER, OP_INC);
 	
 	TEST_ASSERT_EQUAL(FAULT_USER, vmRun(10));
-	TEST_ASSERT_EQUAL(2, IP);
+	TEST_ASSERT_EQUAL(2, tvIP);
 	TEST_ASSERT_EQUAL(0, val);
 	
 	// Nothing should happen as VM has fault set. 
 	TEST_ASSERT_EQUAL(FAULT_USER, vmRun(10));
-	TEST_ASSERT_EQUAL(2, IP);
+	TEST_ASSERT_EQUAL(2, tvIP);
 	TEST_ASSERT_EQUAL(0, val);
 }
 
@@ -121,85 +121,85 @@ static void build_n_incs(int n) {
 	memset(code, OP_INC, n);
 	code[n] = OP_FAULT; code[n+1] = FAULT_USER;
 }
-void testInc() {
+void testToyVmInc() {
 	build_n_incs(6);
 	
 	TEST_ASSERT_EQUAL(FAULT_OK, vmRun(1));
-	TEST_ASSERT_EQUAL(1, IP);	
+	TEST_ASSERT_EQUAL(1, tvIP);	
 	TEST_ASSERT_EQUAL(1, val);
 
 	TEST_ASSERT_EQUAL(FAULT_OK, vmRun(2));
-	TEST_ASSERT_EQUAL(3, IP);	
+	TEST_ASSERT_EQUAL(3, tvIP);	
 	TEST_ASSERT_EQUAL(3, val);
 
 	TEST_ASSERT_EQUAL(FAULT_USER, vmRun(-1));
-	TEST_ASSERT_EQUAL(6+2, IP);	
+	TEST_ASSERT_EQUAL(6+2, tvIP);	
 }
 
-void testInc2() {
+void testToyVmInc2() {
 	CODE(OP_INC, OP_INC, OP_FAULT, FAULT_USER);
 	
 	TEST_ASSERT_EQUAL(FAULT_OK, vmRun(2));
-	TEST_ASSERT_EQUAL(2, IP);	
+	TEST_ASSERT_EQUAL(2, tvIP);	
 	TEST_ASSERT_EQUAL(2, val);
 
 	TEST_ASSERT_EQUAL(FAULT_USER, vmRun(1));
-	TEST_ASSERT_EQUAL(2+2, IP);	
+	TEST_ASSERT_EQUAL(2+2, tvIP);	
 }
 
-void testLiteral() {
+void testToyVmLiteral() {
 	CODE(OP_LIT, 122, OP_FAULT, FAULT_USER);
 	
 	TEST_ASSERT_EQUAL(FAULT_OK, vmRun(1));	// Load literal. 
-	TEST_ASSERT_EQUAL(2, IP);	
+	TEST_ASSERT_EQUAL(2, tvIP);	
 	TEST_ASSERT_EQUAL(122, val);
 	
 	TEST_ASSERT_EQUAL(FAULT_USER, vmRun(-1));	// Fault.
-	TEST_ASSERT_EQUAL(2+2, IP);	
+	TEST_ASSERT_EQUAL(2+2, tvIP);	
 	TEST_ASSERT_EQUAL(122, val);
 }
 
-void testLoad() {
+void testToyVmLoad() {
 	CODE(OP_LIT, 6, OP_LOAD, OP_FAULT, FAULT_USER, 0, 122);
 	
 	TEST_ASSERT_EQUAL(FAULT_USER, vmRun(-1));
-	TEST_ASSERT_EQUAL(5, IP);	
+	TEST_ASSERT_EQUAL(5, tvIP);	
 	TEST_ASSERT_EQUAL(122, val);
 }
 
-void testLoadBad() {
+void testToyVmLoadBad() {
 	CODE(OP_LIT, 66, OP_LOAD, OP_FAULT, FAULT_USER, 0, 122);
 	TEST_ASSERT_EQUAL(FAULT_MEM, vmRun(-1));
-	TEST_ASSERT_EQUAL(3, IP);	
+	TEST_ASSERT_EQUAL(3, tvIP);	
 }
 
-void testOverrun1() {
+void testToyVmOverrun1() {
 	code[VM_CODE_SIZE-1] = OP_INC;
-	IP = VM_CODE_SIZE-1;
+	tvIP = VM_CODE_SIZE-1;
 	
 	TEST_ASSERT_EQUAL(FAULT_OK, vmRun(1));		// Run last instruction OK.
-	TEST_ASSERT_EQUAL(VM_CODE_SIZE, IP);	
+	TEST_ASSERT_EQUAL(VM_CODE_SIZE, tvIP);	
 	TEST_ASSERT_EQUAL(1, val);
 	
-	TEST_ASSERT_EQUAL(FAULT_BAD_IP, vmRun(1));		// Now should fault as outside memory space.
-	TEST_ASSERT_EQUAL(VM_CODE_SIZE+1, IP);			// IP goes to next, which is also illegal. 
+	TEST_ASSERT_EQUAL(FAULT_BAD_tvIP, vmRun(1));		// Now should fault as outside memory space.
+	TEST_ASSERT_EQUAL(VM_CODE_SIZE+1, tvIP);			// tvIP goes to next, which is also illegal. 
 	TEST_ASSERT_EQUAL(1, val);
 }
 
-void testOverrun2() {
+void testToyVmOverrun2() {
 	code[VM_CODE_SIZE-1] = OP_LIT; 
-	IP = VM_CODE_SIZE-1;
+	tvIP = VM_CODE_SIZE-1;
 	
-	TEST_ASSERT_EQUAL(FAULT_BAD_IP, vmRun(1));	// Opcode OK, but loads from IP which is now out of memory.
-	TEST_ASSERT_EQUAL(VM_CODE_SIZE+1, IP);		// IP goes to next, which is also illegal, so does not inrement again as is normal for LITx. 
+	TEST_ASSERT_EQUAL(FAULT_BAD_tvIP, vmRun(1));	// Opcode OK, but loads from tvIP which is now out of memory.
+	TEST_ASSERT_EQUAL(VM_CODE_SIZE+1, tvIP);		// tvIP goes to next, which is also illegal, so does not inrement again as is normal for LITx. 
 	// Value of val is now undefined. 
 }
 
-void testBadOpcode() {
+void testToyVmBadOpcode() {
 	CODE(0xff); 
 	
-	TEST_ASSERT_EQUAL(FAULT_BAD_OPCODE, vmRun(1));	// Opcode OK, but loads from IP which is now out of memory.
-	TEST_ASSERT_EQUAL(1, IP);	
+	TEST_ASSERT_EQUAL(FAULT_BAD_OPCODE, vmRun(1));	// Opcode OK, but loads from tvIP which is now out of memory.
+	TEST_ASSERT_EQUAL(1, tvIP);	
 	TEST_ASSERT_EQUAL(0, val);
 }
 
@@ -208,14 +208,14 @@ TT_IGNORE_FROM_HERE()
 
 
 #define r_pop() (*--ctx->rp)
-#define SET_IP(ip_) do { if (!isIpValid(ip_)) { err = FAULT_IP_INVALID; goto err; } else IP = (ip_)} while (0)
+#define SET_tvIP(ip_) do { if (!isIpValid(ip_)) { err = FAULT_tvIP_INVALID; goto err; } else tvIP = (ip_)} while (0)
 #define CHECK_FAULT(op_) do { op_; if (ctx->err) goto err; } while (0)
 
 #define r_pop() (r_can_pop(1) ? (*--ctx->rp) : (ctx->err = FAULT_R_UND, -1)
-// Rule: IP always points to the next instruction if no fault. Else it points to the word that caused the fault. 
+// Rule: tvIP always points to the next instruction if no fault. Else it points to the word that caused the fault. 
 
 op_halt:  SET_FAULT(HALT); /*  goto next; not required */
-op_ret: CHECK_FAULT(a = r_pop()); SET_IP(a); goto next;
+op_ret: CHECK_FAULT(a = r_pop()); SET_tvIP(a); goto next;
 op_FAULT: SET_FAULT(u_pop());		.
 		.
 		.
@@ -228,11 +228,11 @@ op_FAULT: SET_FAULT(u_pop());		.
 next: 
 	if ((n > 0) && (0 == --n))
 		return 0;
-	CHECK_FAULT(op = mem8rd(*IP++));
+	CHECK_FAULT(op = mem8rd(*tvIP++));
 	if (op & 0x80) {
-		CHECK_FAULT(uint16_t a = (uint16_t)(op & ~0x80) | (uint16_t) mem8rd(*IP++));
-		r_push(IP);
-		SET_IP(a);
+		CHECK_FAULT(uint16_t a = (uint16_t)(op & ~0x80) | (uint16_t) mem8rd(*tvIP++));
+		r_push(tvIP);
+		SET_tvIP(a);
 		goto next;
 	}
 	if (op >= ELEMENTS(OPS))
@@ -270,32 +270,32 @@ void execute(sc_context_t* ctx, int count) {
 # Functions available to primops:
 #  User stack: u_clear(), u_pop(), u_push(), u_tos()
 #  Return stack: r_clear(), r_pop(), p_push(), r_tos()
-#  IP: instruction pointer, points to byte,
+#  tvIP: instruction pointer, points to byte,
 
-PRIMOP (ret) [r_pop(1)] "R( addr - ) Pop return address off r-stack and load IP." { IP = r_pop(); }
-PRIMOP (lit8)	[push(1)]	"( - v8) Pushes next byte in instruction stream." [1, hide] { uint8_t b = memget8(IP++); push(); }
+PRIMOP (ret) [r_pop(1)] "R( addr - ) Pop return address off r-stack and load tvIP." { tvIP = r_pop(); }
+PRIMOP (lit8)	[push(1)]	"( - v8) Pushes next byte in instruction stream." [1, hide] { uint8_t b = memget8(tvIP++); push(); }
 
 PRIMOP	event	"( u16: payload u8:id - ) Send event up to PC containing top stack value"  [-2] {
         int8_t id = pop();
         int16_t val = pop();
         event(id, val);
     }
-PRIMOP 	lit16	"( - v8) Pushes next word in instruction stream." [1, hide] { push(memget16(IP)); IP += 2; }
-PRIMOP 	quote	"( - addr) Reads length from IP, pushes address of next instruction, increments IP by length." [-1, hide] {
-        uint8_t len = memget(IP++);
-        push(IP); // address of quotation
-        IP += len; // jump over
+PRIMOP 	lit16	"( - v8) Pushes next word in instruction stream." [1, hide] { push(memget16(tvIP)); tvIP += 2; }
+PRIMOP 	quote	"( - addr) Reads length from tvIP, pushes address of next instruction, increments tvIP by length." [-1, hide] {
+        uint8_t len = memget(tvIP++);
+        push(tvIP); // address of quotation
+        tvIP += len; // jump over
     }
 PRIMOP 	choice	"(f addr:t addr:f - ) Reads two addresses, likely quotations, then executes one depending on the next stack value." [-3] {
         int16_t f = pop(), t = pop();
-        rpush(IP);
-        IP = (pop() == 0) ? f : t;
+        rpush(tvIP);
+        tvIP = (pop() == 0) ? f : t;
     }
 PRIMOP 	if	"(p addr - ) Reads address, likely a quotation, then executes if the next stack value is non-zero." [-2] {
         int16_t t = pop();
         if (pop() != 0) {
-            rpush(IP);
-            IP = t;
+            rpush(tvIP);
+            tvIP = t;
         }
     }
 

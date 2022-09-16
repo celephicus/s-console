@@ -20,7 +20,7 @@ enum { // Error codes...
 	FAULT_OK, 		// No fault.
 	FAULT_MEM,		// Access out of memory space. 
 	FAULT_BAD_OPCODE,	// Illegal opcode.
-	FAULT_BAD_IP,		// IP outside of memory space.
+	FAULT_BAD_tvIP,		// tvIP outside of memory space.
 	FAULT_USER		// User fault codes from here.
 };
 
@@ -51,16 +51,16 @@ void testR_ErrorPush(void);
 void testR_ErrorTos(void);
 void testR_ErrorNos(void);
 void testR_ErrorPeek(void);
-void testVmRunNone();
-void testVmFaultOp();
-void testInc();
-void testInc2();
-void testLiteral();
-void testLoad();
-void testLoadBad();
-void testOverrun1();
-void testOverrun2();
-void testBadOpcode();
+void testToyVmRunNone();
+void testToyVmFaultOp();
+void testToyVmInc();
+void testToyVmInc2();
+void testToyVmLiteral();
+void testToyVmLoad();
+void testToyVmLoadBad();
+void testToyVmOverrun1();
+void testToyVmOverrun2();
+void testToyVmBadOpcode();
 void testU_StackInit(void);
 void testU_StackPopPush(void);
 void testU_StackReset(void);
@@ -73,11 +73,19 @@ void testU_ErrorPush(void);
 void testU_ErrorTos(void);
 void testU_ErrorNos(void);
 void testU_ErrorPeek(void);
+void test_vm_setup();
+void testscRunNone();
+void testBadOpcode();
+void testByteLiteral();
+void testCellLiteral();
 
 /*** Fixture & dump functions from test files. ***/
 void ts_SetupStackTestContext(void);
 void ts_DestroyStackTestContext(void);
+void setupTestInitFixture(void);
+void destroyTestInitFixture(void);
 void vmInit(void);
+void test_vm_setup(void);
 
 /* Declare test stubs. */
 static void testHeapRamByte_stub_0(void) { testHeapRamByte(0); }
@@ -118,65 +126,74 @@ int main(int argc, char** argv) {
   
   UnitySetTestFile("..\test_helpers.c");
   registerFixture(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);
-  do_run_test(testHeapRamByte_stub_0, "testHeapRamByte(0)", 22);
-  do_run_test(testHeapRamByte_stub_1, "testHeapRamByte(SC_HEAP_SIZE-1)", 23);
-  do_run_test(testHeapRamByteBadRead, "testHeapRamByteBadRead", 25);
-  do_run_test(testHeapRamByteBadWrite, "testHeapRamByteBadWrite", 30);
-  do_run_test(testHeapRamCell_stub_2, "testHeapRamCell(0)", 43);
-  do_run_test(testHeapRamCell_stub_3, "testHeapRamCell(SC_HEAP_SIZE-sizeof(sc_cell_t))", 45);
-  do_run_test(testHeapRamCellBadRead, "testHeapRamCellBadRead", 47);
-  do_run_test(testHeapRamCellBadWrite, "testHeapRamCellBadWrite", 52);
+  do_run_test(testHeapRamByte_stub_0, "testHeapRamByte(0)", 23);
+  do_run_test(testHeapRamByte_stub_1, "testHeapRamByte(SC_HEAP_SIZE-1)", 24);
+  do_run_test(testHeapRamByteBadRead, "testHeapRamByteBadRead", 26);
+  do_run_test(testHeapRamByteBadWrite, "testHeapRamByteBadWrite", 31);
+  do_run_test(testHeapRamCell_stub_2, "testHeapRamCell(0)", 44);
+  do_run_test(testHeapRamCell_stub_3, "testHeapRamCell(SC_HEAP_SIZE-sizeof(sc_cell_t))", 46);
+  do_run_test(testHeapRamCellBadRead, "testHeapRamCellBadRead", 48);
+  do_run_test(testHeapRamCellBadWrite, "testHeapRamCellBadWrite", 53);
   registerFixture(NULL, NULL, NULL);
   
   UnitySetTestFile("..\test_init.c");
-  registerFixture(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);
-  do_run_test(testInitContext, "testInitContext", 13);
+  registerFixture(setupTestInitFixture, NULL, destroyTestInitFixture);
+  do_run_test(testInitContext, "testInitContext", 25);
   registerFixture(NULL, NULL, NULL);
   
   UnitySetTestFile("..\test_r_stack.c");
   registerFixture(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);
-  do_run_test(testR_StackInit, "testR_StackInit", 13);
-  do_run_test(testR_StackPopPush, "testR_StackPopPush", 23);
-  do_run_test(testR_StackReset, "testR_StackReset", 36);
-  do_run_test(testR_StackPeek, "testR_StackPeek", 50);
-  do_run_test(testR_StackTosNos, "testR_StackTosNos", 58);
-  do_run_test(testR_StackCanPop, "testR_StackCanPop", 69);
-  do_run_test(testR_StackCanPush, "testR_StackCanPush", 93);
-  do_run_test(testR_ErrorPop, "testR_ErrorPop", 114);
-  do_run_test(testR_ErrorPush, "testR_ErrorPush", 119);
-  do_run_test(testR_ErrorTos, "testR_ErrorTos", 126);
-  do_run_test(testR_ErrorNos, "testR_ErrorNos", 131);
-  do_run_test(testR_ErrorPeek, "testR_ErrorPeek", 137);
+  do_run_test(testR_StackInit, "testR_StackInit", 14);
+  do_run_test(testR_StackPopPush, "testR_StackPopPush", 24);
+  do_run_test(testR_StackReset, "testR_StackReset", 37);
+  do_run_test(testR_StackPeek, "testR_StackPeek", 51);
+  do_run_test(testR_StackTosNos, "testR_StackTosNos", 59);
+  do_run_test(testR_StackCanPop, "testR_StackCanPop", 70);
+  do_run_test(testR_StackCanPush, "testR_StackCanPush", 94);
+  do_run_test(testR_ErrorPop, "testR_ErrorPop", 115);
+  do_run_test(testR_ErrorPush, "testR_ErrorPush", 120);
+  do_run_test(testR_ErrorTos, "testR_ErrorTos", 127);
+  do_run_test(testR_ErrorNos, "testR_ErrorNos", 132);
+  do_run_test(testR_ErrorPeek, "testR_ErrorPeek", 138);
   registerFixture(NULL, NULL, NULL);
   
   UnitySetTestFile("..\test_toy_vm.c");
   registerFixture(vmInit, NULL, NULL);
-  do_run_test(testVmRunNone, "testVmRunNone", 100);
-  do_run_test(testVmFaultOp, "testVmFaultOp", 106);
-  do_run_test(testInc, "testInc", 123);
-  do_run_test(testInc2, "testInc2", 138);
-  do_run_test(testLiteral, "testLiteral", 149);
-  do_run_test(testLoad, "testLoad", 161);
-  do_run_test(testLoadBad, "testLoadBad", 169);
-  do_run_test(testOverrun1, "testOverrun1", 175);
-  do_run_test(testOverrun2, "testOverrun2", 188);
-  do_run_test(testBadOpcode, "testBadOpcode", 197);
+  do_run_test(testToyVmRunNone, "testToyVmRunNone", 100);
+  do_run_test(testToyVmFaultOp, "testToyVmFaultOp", 106);
+  do_run_test(testToyVmInc, "testToyVmInc", 123);
+  do_run_test(testToyVmInc2, "testToyVmInc2", 138);
+  do_run_test(testToyVmLiteral, "testToyVmLiteral", 149);
+  do_run_test(testToyVmLoad, "testToyVmLoad", 161);
+  do_run_test(testToyVmLoadBad, "testToyVmLoadBad", 169);
+  do_run_test(testToyVmOverrun1, "testToyVmOverrun1", 175);
+  do_run_test(testToyVmOverrun2, "testToyVmOverrun2", 188);
+  do_run_test(testToyVmBadOpcode, "testToyVmBadOpcode", 197);
   registerFixture(NULL, NULL, NULL);
   
   UnitySetTestFile("..\test_u_stack.c");
   registerFixture(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);
-  do_run_test(testU_StackInit, "testU_StackInit", 13);
-  do_run_test(testU_StackPopPush, "testU_StackPopPush", 23);
-  do_run_test(testU_StackReset, "testU_StackReset", 36);
-  do_run_test(testU_StackPeek, "testU_StackPeek", 50);
-  do_run_test(testU_StackTosNos, "testU_StackTosNos", 58);
-  do_run_test(testU_StackCanPop, "testU_StackCanPop", 69);
-  do_run_test(testU_StackCanPush, "testU_StackCanPush", 93);
-  do_run_test(testU_ErrorPop, "testU_ErrorPop", 114);
-  do_run_test(testU_ErrorPush, "testU_ErrorPush", 119);
-  do_run_test(testU_ErrorTos, "testU_ErrorTos", 126);
-  do_run_test(testU_ErrorNos, "testU_ErrorNos", 131);
-  do_run_test(testU_ErrorPeek, "testU_ErrorPeek", 137);
+  do_run_test(testU_StackInit, "testU_StackInit", 14);
+  do_run_test(testU_StackPopPush, "testU_StackPopPush", 24);
+  do_run_test(testU_StackReset, "testU_StackReset", 37);
+  do_run_test(testU_StackPeek, "testU_StackPeek", 51);
+  do_run_test(testU_StackTosNos, "testU_StackTosNos", 59);
+  do_run_test(testU_StackCanPop, "testU_StackCanPop", 70);
+  do_run_test(testU_StackCanPush, "testU_StackCanPush", 94);
+  do_run_test(testU_ErrorPop, "testU_ErrorPop", 115);
+  do_run_test(testU_ErrorPush, "testU_ErrorPush", 120);
+  do_run_test(testU_ErrorTos, "testU_ErrorTos", 127);
+  do_run_test(testU_ErrorNos, "testU_ErrorNos", 132);
+  do_run_test(testU_ErrorPeek, "testU_ErrorPeek", 138);
+  registerFixture(NULL, NULL, NULL);
+  
+  UnitySetTestFile("..\test_vm.c");
+  do_run_test(test_vm_setup, "test_vm_setup", 12);
+  registerFixture(test_vm_setup, NULL, ts_DestroyStackTestContext);
+  do_run_test(testscRunNone, "testscRunNone", 18);
+  do_run_test(testBadOpcode, "testBadOpcode", 23);
+  do_run_test(testByteLiteral, "testByteLiteral", 31);
+  do_run_test(testCellLiteral, "testCellLiteral", 39);
   registerFixture(NULL, NULL, NULL);
 
   return UnityEnd();

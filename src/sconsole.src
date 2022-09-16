@@ -28,18 +28,13 @@
 # Options are a set of space separated tags. 
 #  option `hide' excludes the primop or word from the dictionary, usually because the compiler can generate the required call.
 
-PRIMOP 	LIT8	'( - c)' "Pushes next byte in instruction stream." [hide] { c = CHECK_ERR(memget_char_ip()) console_u_push(c); }
-PRIMOP 	LIT16	'( - v)' "Pushes next cell in instruction stream." [hide] { v = CHECK_ERR(memget_cell_ip()) console_u_push(v); }
+PRIMOP 	LIT8	'( - c)' "Pushes next byte in instruction stream." [hide] { CHECK_FAULT(c = heap_read_byte_ip()); u_push(c); }
+PRIMOP 	LIT		'( - v)' "Pushes next cell in instruction stream." [hide] { CHECK_FAULT(v = heap_read_cell_ip()); u_push(v); }
+PRIMOP  -		'(n - n)' "Negate signed value on TOS." [] { UNOP(-); }
 
 IGNORE
 
 -This will be ignored!-
-
-
-
-/* Some helper functions & macros for commands. */
-#define binop(op_) { sc_cell_t a = u_pop(); u_tos = u_tos op_ a; } 
-#define unop(op_) u_tos = op_ u_tos; }
 
 // Execute at most count instructions. If count if negative then run forever.
 // Will return on a `yield' instruction. 

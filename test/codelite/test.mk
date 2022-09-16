@@ -14,7 +14,7 @@ CurrentFileName        :=
 CurrentFilePath        :=
 CurrentFileFullPath    :=
 User                   :=admin
-Date                   :=15/09/2022
+Date                   :=16/09/2022
 CodeLitePath           :="C:/Program Files/CodeLite"
 MakeDirCommand         :=mkdir
 LinkerName             :=C:/msys64/mingw64/bin/g++.exe
@@ -64,7 +64,8 @@ AS       := C:/msys64/mingw64/bin/as.exe
 ## User defined environment variables
 ##
 CodeLiteDir:=C:\Program Files\CodeLite
-Objects0=$(IntermediateDirectory)/up_test_helpers.c$(ObjectSuffix) $(IntermediateDirectory)/up_up_src_sconsole.c$(ObjectSuffix) $(IntermediateDirectory)/up_test_r_stack.c$(ObjectSuffix) $(IntermediateDirectory)/up_test_u_stack.c$(ObjectSuffix) $(IntermediateDirectory)/up_test_init.c$(ObjectSuffix) $(IntermediateDirectory)/up_main.c$(ObjectSuffix) $(IntermediateDirectory)/up_test_toy_vm.c$(ObjectSuffix) $(IntermediateDirectory)/up_t_support.c$(ObjectSuffix) $(IntermediateDirectory)/up_unity.c$(ObjectSuffix) 
+Objects0=$(IntermediateDirectory)/up_test_vm.c$(ObjectSuffix) $(IntermediateDirectory)/up_test_toy_vm.c$(ObjectSuffix) $(IntermediateDirectory)/up_up_src_sconsole.c$(ObjectSuffix) $(IntermediateDirectory)/up_test_helpers.c$(ObjectSuffix) $(IntermediateDirectory)/up_test_r_stack.c$(ObjectSuffix) $(IntermediateDirectory)/up_test_u_stack.c$(ObjectSuffix) $(IntermediateDirectory)/up_test_init.c$(ObjectSuffix) $(IntermediateDirectory)/up_main.c$(ObjectSuffix) $(IntermediateDirectory)/up_t_support.c$(ObjectSuffix) $(IntermediateDirectory)/up_unity.c$(ObjectSuffix) \
+	
 
 
 
@@ -98,13 +99,21 @@ PreBuild:
 ##
 ## Objects
 ##
-$(IntermediateDirectory)/up_test_helpers.c$(ObjectSuffix): ../test_helpers.c $(IntermediateDirectory)/up_test_helpers.c$(DependSuffix)
-	$(CC) $(SourceSwitch) "C:/Users/admin/Documents/git/s-console/test/test_helpers.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/up_test_helpers.c$(ObjectSuffix) $(IncludePath)
-$(IntermediateDirectory)/up_test_helpers.c$(DependSuffix): ../test_helpers.c
-	@$(CC) $(CFLAGS) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/up_test_helpers.c$(ObjectSuffix) -MF$(IntermediateDirectory)/up_test_helpers.c$(DependSuffix) -MM ../test_helpers.c
+$(IntermediateDirectory)/up_test_vm.c$(ObjectSuffix): ../test_vm.c $(IntermediateDirectory)/up_test_vm.c$(DependSuffix)
+	$(CC) $(SourceSwitch) "C:/Users/admin/Documents/git/s-console/test/test_vm.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/up_test_vm.c$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/up_test_vm.c$(DependSuffix): ../test_vm.c
+	@$(CC) $(CFLAGS) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/up_test_vm.c$(ObjectSuffix) -MF$(IntermediateDirectory)/up_test_vm.c$(DependSuffix) -MM ../test_vm.c
 
-$(IntermediateDirectory)/up_test_helpers.c$(PreprocessSuffix): ../test_helpers.c
-	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/up_test_helpers.c$(PreprocessSuffix) ../test_helpers.c
+$(IntermediateDirectory)/up_test_vm.c$(PreprocessSuffix): ../test_vm.c
+	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/up_test_vm.c$(PreprocessSuffix) ../test_vm.c
+
+$(IntermediateDirectory)/up_test_toy_vm.c$(ObjectSuffix): ../test_toy_vm.c $(IntermediateDirectory)/up_test_toy_vm.c$(DependSuffix)
+	$(CC) $(SourceSwitch) "C:/Users/admin/Documents/git/s-console/test/test_toy_vm.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/up_test_toy_vm.c$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/up_test_toy_vm.c$(DependSuffix): ../test_toy_vm.c
+	@$(CC) $(CFLAGS) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/up_test_toy_vm.c$(ObjectSuffix) -MF$(IntermediateDirectory)/up_test_toy_vm.c$(DependSuffix) -MM ../test_toy_vm.c
+
+$(IntermediateDirectory)/up_test_toy_vm.c$(PreprocessSuffix): ../test_toy_vm.c
+	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/up_test_toy_vm.c$(PreprocessSuffix) ../test_toy_vm.c
 
 $(IntermediateDirectory)/up_up_src_sconsole.c$(ObjectSuffix): ../../src/sconsole.c $(IntermediateDirectory)/up_up_src_sconsole.c$(DependSuffix)
 	$(CC) $(SourceSwitch) "C:/Users/admin/Documents/git/s-console/src/sconsole.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/up_up_src_sconsole.c$(ObjectSuffix) $(IncludePath)
@@ -113,6 +122,14 @@ $(IntermediateDirectory)/up_up_src_sconsole.c$(DependSuffix): ../../src/sconsole
 
 $(IntermediateDirectory)/up_up_src_sconsole.c$(PreprocessSuffix): ../../src/sconsole.c
 	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/up_up_src_sconsole.c$(PreprocessSuffix) ../../src/sconsole.c
+
+$(IntermediateDirectory)/up_test_helpers.c$(ObjectSuffix): ../test_helpers.c $(IntermediateDirectory)/up_test_helpers.c$(DependSuffix)
+	$(CC) $(SourceSwitch) "C:/Users/admin/Documents/git/s-console/test/test_helpers.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/up_test_helpers.c$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/up_test_helpers.c$(DependSuffix): ../test_helpers.c
+	@$(CC) $(CFLAGS) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/up_test_helpers.c$(ObjectSuffix) -MF$(IntermediateDirectory)/up_test_helpers.c$(DependSuffix) -MM ../test_helpers.c
+
+$(IntermediateDirectory)/up_test_helpers.c$(PreprocessSuffix): ../test_helpers.c
+	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/up_test_helpers.c$(PreprocessSuffix) ../test_helpers.c
 
 $(IntermediateDirectory)/up_test_r_stack.c$(ObjectSuffix): ../test_r_stack.c $(IntermediateDirectory)/up_test_r_stack.c$(DependSuffix)
 	$(CC) $(SourceSwitch) "C:/Users/admin/Documents/git/s-console/test/test_r_stack.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/up_test_r_stack.c$(ObjectSuffix) $(IncludePath)
@@ -145,14 +162,6 @@ $(IntermediateDirectory)/up_main.c$(DependSuffix): ../main.c
 
 $(IntermediateDirectory)/up_main.c$(PreprocessSuffix): ../main.c
 	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/up_main.c$(PreprocessSuffix) ../main.c
-
-$(IntermediateDirectory)/up_test_toy_vm.c$(ObjectSuffix): ../test_toy_vm.c $(IntermediateDirectory)/up_test_toy_vm.c$(DependSuffix)
-	$(CC) $(SourceSwitch) "C:/Users/admin/Documents/git/s-console/test/test_toy_vm.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/up_test_toy_vm.c$(ObjectSuffix) $(IncludePath)
-$(IntermediateDirectory)/up_test_toy_vm.c$(DependSuffix): ../test_toy_vm.c
-	@$(CC) $(CFLAGS) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/up_test_toy_vm.c$(ObjectSuffix) -MF$(IntermediateDirectory)/up_test_toy_vm.c$(DependSuffix) -MM ../test_toy_vm.c
-
-$(IntermediateDirectory)/up_test_toy_vm.c$(PreprocessSuffix): ../test_toy_vm.c
-	$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/up_test_toy_vm.c$(PreprocessSuffix) ../test_toy_vm.c
 
 $(IntermediateDirectory)/up_t_support.c$(ObjectSuffix): ../t_support.c $(IntermediateDirectory)/up_t_support.c$(DependSuffix)
 	$(CC) $(SourceSwitch) "C:/Users/admin/Documents/git/s-console/test/t_support.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/up_t_support.c$(ObjectSuffix) $(IncludePath)

@@ -4,12 +4,13 @@
 #include <stdlib.h>
 
 #include "unity.h"
-#include "t_support.h"
 
 TT_BEGIN_INCLUDE()
 #define SCONSOLE_WANT_INTERNAL_DEFS
 #include "sconsole.h"
 TT_END_INCLUDE()
+
+#include "t_support.h"
 
 TT_BEGIN_FIXTURE(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);
 

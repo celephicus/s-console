@@ -8,6 +8,7 @@
   <Description/>
   <Dependencies/>
   <VirtualDirectory Name="src">
+    <File Name="../test_vm.c"/>
     <File Name="../test_helpers.c"/>
     <File Name="../test_r_stack.c"/>
     <File Name="../test_u_stack.c"/>

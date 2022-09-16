@@ -4,22 +4,79 @@
 #include "sconsole.h"
 
 // One instance of global state.
-sc_globals_t g_sc;
-
-// Hack to allow access by macros.
-ScContext* g_sc_ctx;
+ScState g_sc_state;
 
 void scInitContext(ScContext* ctx) {
-	g_sc_ctx = ctx;
-	FAULT = SC_FAULT_OK;		// Set no error. 
-	u_reset();
-	r_reset();
+	ctx->fault = SC_FAULT_OK;		// Set no error. 
+	// TODO: How to clear stacks before CTX is set?
+	ctx->u_sp = ctx->u_stack + SC_U_STACK_SIZE;
+	ctx->r_sp = ctx->r_stack + SC_R_STACK_SIZE;
 	// TODO: Set IP to some value to fault if not set to something else. 
+}
+void scInit(ScContext* ctx) {
+	g_sc_state.ctx = ctx; 
+	g_sc_state.here = 0;
+	g_sc_state.latest = 0;
+}
+
+static uint8_t heap_read_byte_ip() {
+	uint8_t v = scHeapReadByte(IP++);
+	if (FAULT)
+		FAULT = SC_FAULT_BAD_IP;
+	return v;
+}
+static sc_cell_t heap_read_cell_ip() {
+	sc_cell_t v = scHeapReadCell(IP);
+	IP += sizeof(sc_cell_t);
+	if (FAULT)
+		FAULT = SC_FAULT_BAD_IP;
+	return v;
+}
+
+// Used in the VM to check if an fault has been set, and jump to fault handler if it has. 
+#define CHECK_FAULT(op_) do { op_; if (FAULT) goto fault; } while (0)
+
+// Used in the VM to set an fault, and jump to fault handler. 
+#define SET_FAULT(err_) do { FAULT = (err_); goto fault; } while (0)
+
+/* Some helper functions & macros for commands. */
+#define BINOP(op_) do { v = u_pop(); u_tos = u_tos op_ v; } while (0)
+#define UNOP(op_) do { u_tos = op_ u_tos; } while (0)
+
+uint8_t scRun(int n) {
+	static const void* OPS[] = { SC_JUMPS };
+	uint8_t c;		// Scratchpad
+	sc_cell_t v;		// Scratchpad
+	
+	if (FAULT) 			// Cannot run in fault state.
+		return FAULT;
+		
+next: 
+	if (0 == n) 	// Zero instructions to do so exit.
+		return SC_FAULT_OK;
+	if (n > 0)	// Only for non-negative n: count instructions then exit when we have done our quota. 
+		n -= 1;
+    
+    uint8_t op;
+	// last_ip = IP;	// Store last IP to restore it on fault.
+	CHECK_FAULT(op = heap_read_byte_ip());	// Load opcode, increment IP,  maybe flag IP out of range. 
+	
+	if (op >= ELEMENT_COUNT(OPS))	// Illegal opcode.
+		SET_FAULT(SC_FAULT_BAD_OPCODE);
+		
+	goto *OPS[op];				// Jump to code snippets to do words. 
+	
+fault:	
+	// IP = last_ip;	// Restore IP on fault.
+	return FAULT;
+
+// Words in snippet form.	
+SC_SNIPPETS
 }
 
 uint8_t scHeapReadByte(sc_cell_t offs) {
 	if(offs <= SC_HEAP_SIZE - sizeof(uint8_t))
-		return g_sc.heap[offs];
+		return HEAP[offs];
 //	if(offs <= SC_HEAP_SIZE + SC_READ_ONLY_SIZE - sizeof(uint8_t))
 //		return PGM_READ_BYTE(offs - SC_HEAP_SIZE);
 	else {
@@ -29,7 +86,7 @@ uint8_t scHeapReadByte(sc_cell_t offs) {
 }
 void scHeapWriteByte(sc_cell_t offs, uint8_t v) {
 	if(offs <= SC_HEAP_SIZE - sizeof(uint8_t))
-		g_sc.heap[offs] = v;
+		HEAP[offs] = v;
 //	if(offs <= SC_HEAP_SIZE + SC_READ_ONLY_SIZE - sizeof(uint8_t))
 //		return PGM_READ_BYTE(offs - SC_HEAP_SIZE);
 	else
@@ -38,7 +95,7 @@ void scHeapWriteByte(sc_cell_t offs, uint8_t v) {
 
 sc_cell_t scHeapReadCell(sc_cell_t offs) {
 	if(offs <= SC_HEAP_SIZE - sizeof(sc_cell_t))
-		return *(const sc_cell_t*)&g_sc.heap[offs];
+		return *(const sc_cell_t*)&HEAP[offs];
 //	if(offs <= SC_HEAP_SIZE + SC_READ_ONLY_SIZE - sizeof(uint8_t))
 //		return PGM_READ_BYTE(offs - SC_HEAP_SIZE);
 	else {
@@ -48,59 +105,9 @@ sc_cell_t scHeapReadCell(sc_cell_t offs) {
 }
 void scHeapWriteCell(sc_cell_t offs, sc_cell_t v) {
 	if(offs <= SC_HEAP_SIZE - sizeof(sc_cell_t))
-		*(sc_cell_t*)&g_sc.heap[offs] = v;
+		*(sc_cell_t*)&HEAP[offs] = v;
 //	if(offs <= SC_HEAP_SIZE + SC_READ_ONLY_SIZE - sizeof(uint8_t))
 //		return PGM_READ_BYTE(offs - SC_HEAP_SIZE);
 	else
 		FAULT = SC_FAULT_MEM;
 }
-
-#if 0
-void scInit(ScContext* ctxs, int num_ctx) {
-	g_sc->contexts = ctxs;
-	//g_sc->num_ctx = num_ctx;
-	if (1 != num_ctx)
-		return 1;
-	g_sc->current = &g_sc->contexts[0];
-	u_reset();
-	scSetIp(ctx , -1);		// Set invalid.
-}
-
-void scSetIp(ScContext* ctx, sc_ucell_t offs) {
-	g_sc_ctx->ip = offs; // No check, exec will do that.
-}
-
-static bool is_byte_within_heap(ScContext* ctx, sc_ucell_t offs) {
-	return (offs <= SC_HEAP_SIZE - sizeof(uint8_t));
-}
-static bool is_cell_within_heap(ScContext* ctx, sc_ucell_t offs) {
-	return (offs <= SC_HEAP_SIZE - sizeof(sc_cell_t));
-}
-void scHeapWriteByte(ScContext* ctx, sc_ucell_t offs, uint8_t v) {
-	if(offs <= SC_HEAP_SIZE - sizeof(uint8_t))
-		g_sc_ctx->heap[offs] = v;
-	if(offs <= SC_HEAP_SIZE + SC_READ_ONLY_SIZE - sizeof(uint8_t))
-		g_sc_ctx->error = SC_ERR_MEM_WRITE_RO;
-	else
-		g_sc_ctx->error = SC_ERR_MEM_WRITE_RANGE;
-}
-void scHeapWriteCell(ScContext* ctx, sc_ucell_t offs, sc_ucell_t v) {
-	if(offs <= SC_HEAP_SIZE - sizeof(sc_ucell_t))
-		(*sc_ucell_t)&g_sc_ctx->heap[offs] = v;
-	if(offs <= SC_HEAP_SIZE + SC_READ_ONLY_SIZE - sizeof(sc_ucell_t))
-		g_sc_ctx->error = SC_ERR_MEM_WRITE_RO;
-	else
-		g_sc_ctx->error = SC_ERR_MEM_WRITE_RANGE;
-}
-
-// Read cell from heap.
-sc_ucell_t scHeapReadCell(ScContext* ctx, sc_ucell_t offs) {
-	if(offs <= SC_HEAP_SIZE - sizeof(sc_ucell_t))
-		return g_sc_ctx->heap[offs] = v;
-	if(offs <= SC_HEAP_SIZE + SC_READ_ONLY_SIZE - sizeof(sc_ucell_t))
-		return PGM_READ_DWORD(offs - SC_HEAP_SIZE);
-	else
-		g_sc_ctx->error = SC_ERR_MEM_WRITE_RANGE;
-}
-
-#endif

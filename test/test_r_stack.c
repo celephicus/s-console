@@ -12,7 +12,7 @@
 
 TT_BEGIN_FIXTURE(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);
 
-void testR_StackInit(void) {
+void testRStackInit(void) {
     // Check guards are contiguous. 
     TEST_ASSERT_EQUAL_PTR(&CTX->t_r_stack_pre+1, &CTX->r_stack[0]);
     TEST_ASSERT_EQUAL_PTR(&CTX->t_r_stack_post-1, &CTX->r_stack[SC_R_STACK_SIZE-1]);
@@ -22,7 +22,11 @@ void testR_StackInit(void) {
     TEST_ASSERT_EQUAL(SC_R_STACK_SIZE, r_size());
 }
 
-void testR_StackPopPush(void) {
+void testRStackSize(void) {
+	TEST_ASSERT_EQUAL(SC_R_STACK_SIZE, r_size());
+}
+
+void testRStackPopPush(void) {
     for (int i = 0; i < SC_R_STACK_SIZE; i += 1) {
         r_push(i);
         TEST_ASSERT_EQUAL(i+1, r_depth());
@@ -35,7 +39,7 @@ void testR_StackPopPush(void) {
     }
 }
 
-void testR_StackReset(void) {
+void testRStackReset(void) {
     r_reset();
     TEST_ASSERT_EQUAL(0, r_depth());
     r_push(1);
@@ -49,7 +53,7 @@ void testR_StackReset(void) {
     TEST_ASSERT_EQUAL(0, r_depth());
 }
 
-void testR_StackPeek(void) {
+void testRStackPeek(void) {
     for (int i = 0; i < SC_R_STACK_SIZE; i += 1)
         r_push(i);
 
@@ -57,7 +61,7 @@ void testR_StackPeek(void) {
         TEST_ASSERT_EQUAL(SC_R_STACK_SIZE - i - 1, r_peek(i));
 }
 
-void testR_StackTosNos(void) {
+void testRStackTosNos(void) {
     r_push(0);
     TEST_ASSERT_EQUAL_UINT32(0, r_tos);
 
@@ -68,7 +72,7 @@ void testR_StackTosNos(void) {
     }
 }
 
-void testR_StackCanPop(void) {
+void testRStackCanPop(void) {
     TEST_ASSERT_TRUE(r_can_pop(0));
     TEST_ASSERT_FALSE(r_can_pop(1));
     TEST_ASSERT_FALSE(r_can_pop(SC_R_STACK_SIZE));
@@ -92,7 +96,7 @@ void testR_StackCanPop(void) {
     TEST_ASSERT_FALSE(r_can_pop(SC_R_STACK_SIZE + 1));
 }
 
-void testR_StackCanPush(void) {
+void testRStackCanPush(void) {
     TEST_ASSERT_TRUE(r_can_push(0));
     TEST_ASSERT_TRUE(r_can_push(1));
     TEST_ASSERT_TRUE(r_can_push(SC_R_STACK_SIZE));

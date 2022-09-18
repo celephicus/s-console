@@ -10,9 +10,17 @@
 
 #include "t_support.h"
 
+/* To make tests for r stack:
+	copy file to test_r_stack.c
+	replace testU -> testR
+	replace u_ -> r_
+	replace SC_U_STACK_SIZE -> SC_R_STACK_SIZE
+*/
+//TODO: Automate!
+
 TT_BEGIN_FIXTURE(ts_SetupStackTestContext, NULL, ts_DestroyStackTestContext);
 
-void testU_StackInit(void) {
+void testUStackInit(void) {
     // Check guards are contiguous. 
     TEST_ASSERT_EQUAL_PTR(&CTX->t_u_stack_pre+1, &CTX->u_stack[0]);
     TEST_ASSERT_EQUAL_PTR(&CTX->t_u_stack_post-1, &CTX->u_stack[SC_U_STACK_SIZE-1]);
@@ -22,11 +30,11 @@ void testU_StackInit(void) {
     TEST_ASSERT_EQUAL(SC_U_STACK_SIZE, u_size());
 }
 
-void testU_StackSize(void) {
+void testUStackSize(void) {
 	TEST_ASSERT_EQUAL(SC_U_STACK_SIZE, u_size());
 }
 
-void testU_StackPopPush(void) {
+void testUStackPopPush(void) {
     for (int i = 0; i < SC_U_STACK_SIZE; i += 1) {
         u_push(i);
         TEST_ASSERT_EQUAL(i+1, u_depth());
@@ -39,7 +47,7 @@ void testU_StackPopPush(void) {
     }
 }
 
-void testU_StackReset(void) {
+void testUStackReset(void) {
     u_reset();
     TEST_ASSERT_EQUAL(0, u_depth());
     u_push(1);
@@ -53,7 +61,7 @@ void testU_StackReset(void) {
     TEST_ASSERT_EQUAL(0, u_depth());
 }
 
-void testU_StackPeek(void) {
+void testUStackPeek(void) {
     for (int i = 0; i < SC_U_STACK_SIZE; i += 1)
         u_push(i);
 
@@ -61,7 +69,7 @@ void testU_StackPeek(void) {
         TEST_ASSERT_EQUAL(SC_U_STACK_SIZE - i - 1, u_peek(i));
 }
 
-void testU_StackTosNos(void) {
+void testUStackTosNos(void) {
     u_push(0);
     TEST_ASSERT_EQUAL_UINT32(0, u_tos);
 
@@ -72,7 +80,7 @@ void testU_StackTosNos(void) {
     }
 }
 
-void testU_StackCanPop(void) {
+void testUStackCanPop(void) {
     TEST_ASSERT_TRUE(u_can_pop(0));
     TEST_ASSERT_FALSE(u_can_pop(1));
     TEST_ASSERT_FALSE(u_can_pop(SC_U_STACK_SIZE));
@@ -96,7 +104,7 @@ void testU_StackCanPop(void) {
     TEST_ASSERT_FALSE(u_can_pop(SC_U_STACK_SIZE + 1));
 }
 
-void testU_StackCanPush(void) {
+void testUStackCanPush(void) {
     TEST_ASSERT_TRUE(u_can_push(0));
     TEST_ASSERT_TRUE(u_can_push(1));
     TEST_ASSERT_TRUE(u_can_push(SC_U_STACK_SIZE));

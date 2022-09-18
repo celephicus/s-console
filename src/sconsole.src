@@ -28,16 +28,14 @@
 # Options are a set of space separated tags. 
 #  option `hide' excludes the primop or word from the dictionary, usually because the compiler can generate the required call.
 
-PRIMOP 	LIT8	'( - c)' "Pushes next byte in instruction stream." [hide] { CHECK_FAULT(c = heap_read_byte_ip()); VERIFY_U_CAN_PUSH(1); u_push(c); }
-PRIMOP 	LIT		'( - v)' "Pushes next cell in instruction stream." [hide] { CHECK_FAULT(v = heap_read_cell_ip()); VERIFY_U_CAN_PUSH(1); u_push(v); }
+PRIMOP 	LIT8	'( - c)' "Pushes next byte in instruction stream." [hide] { VERIFY_U_CAN_PUSH(1); CHECK_FAULT(c = heap_read_byte_ip()); u_push(c); }
+PRIMOP 	LIT		'( - v)' "Pushes next cell in instruction stream." [hide] { VERIFY_U_CAN_PUSH(1); CHECK_FAULT(v = heap_read_cell_ip()); u_push(v); }
 PRIMOP 	FAULT	'(n - )' "Sets fault state from stack.Stops VM." [] { VERIFY_U_CAN_POP(1); SET_FAULT(u_pop()); }
 
 # Unary operators.
 PRIMOP  NEGATE	'(n - -n)' "Change sign of signed value on TOS." [] { UNOP(-); }
 PRIMOP 	0=		'(v -- f)' "TRUE on zero, false otherwise. Or reverse the boolean value of v." [n=zero_equals] { VERIFY_U_CAN_POP(1); u_tos = u_tos ? 0 : -1; }
 PRIMOP  INVERT	'(v1 - v2)' "Invert all bits (1's complement)." [] { VERIFY_U_CAN_POP(1); UNOP(~); }
-PRIMOP  INC	'(n - n+1)' "Increment TOS by one." [] { VERIFY_U_CAN_POP(1); u_tos += 1; }
-PRIMOP  DEC	'(n - n+1)' "Decrement TOS by one." [] { VERIFY_U_CAN_POP(1); u_tos -= 1; }
 
 # Binary operators.
 PRIMOP  -	'(n1 n2 - n3)' "Subtract n2 from n1 and leave the result in n3." [n=minus] { BINOP(-); }
@@ -46,9 +44,15 @@ PRIMOP  *	'(n1 n2 - n3)' "Multiply n1 by n2 and leave the result in n3 using sig
 # Misc operators.
 PRIMOP  /MOD	'(n1 n2 - n3 n4)' "Divide  n1 by n2 and leave the remainder n3 and  quotient  n4. n3 has the same sign as n1." [n=slash_mod] { VERIFY_U_CAN_POP(2); div_t r; r = div(u_nos, u_tos); u_tos = r.rem; u_nos = r.quot; }
 
+# Stack operators.
+PRIMOP  DROP	'(v - )' "Discard top item from stack." [] { VERIFY_U_CAN_POP(1); u_drop(); }
+PRIMOP  DUP		'(v - v v)' "Duplicate top item from stack." [] { VERIFY_U_CAN_POP(1); VERIFY_U_CAN_PUSH(1); v = u_tos; u_push(v); }
+PRIMOP  SWAP	'(v1 v2 - v2 v1)' "Duplicate top item from stack." [] { VERIFY_U_CAN_POP(2); v = u_tos; u_tos = u_nos; u_nos = v; }
+
 IGNORE
 
 WORD  	INC	'(n - n+1)' "Increment TOS by one." [] { LIT8 1 + }
+WORD  	DEC	'(n - n-1)' "Decrement TOS by one." [] { LIT8 1 - }
 WORD	+	'(n1 n2 - n3)' "Add n1 to n2 and leave the result in n3." [n=plus] { NEGATE - }
 WORD  	/	'(n1 n2 - n3)' "Divide n1 by n2 and leave the quotient in n3 using signed arithmetic." [n=divide] { /MOD NIP }
 WORD  	MOD	'(n1 n2 - n3)' "Divide n1 by n2 and leave the remainder in n3 using signed arithmetic." [n=divide] { /MOD DROP }
@@ -57,19 +61,12 @@ WORD  	MOD	'(n1 n2 - n3)' "Divide n1 by n2 and leave the remainder in n3 using s
 //        bind(1,  lit8);
 //        bind(2,  lit16);
         bind(3,  quote);
-        bind(4,  eventHeader);               EventHeader,           "event{",                4   // id          -
-        bind(5,  eventBody8);              EventBody8,            "cdata",                 5   // val         -
-        bind(6,  eventBody16);               EventBody16,           "data",                  6   // val         -
-        bind(7,  eventFooter);               EventFooter,           "}event",                7   //             -
-        bind(8,  eventOp);                     Event,                 "event",                 8   // val id      -
         bind(9,  fetch8);                    Fetch8,                "c@",                    9   // addr        - val
         bind(10, store8);                    Store8,                "c!",                    10  // val addr    -
         bind(11, fetch16);                   Fetch16,               "@",                     11  // addr        - val
         bind(12, store16);                   Store16,               "!",                     12  // val addr    -
-//        bind(13, add);                       Add,                   "+",                     13  // y x         - sum
 //        bind(14, sub);                       Subtract,              "-",                     14  // y x         - diff
 //        bind(15, mul);                       Multiply,              "*",                     15  // y x         - prod
-//        bind(16, div);                       Divide,                "/",                     16  // y x         - quot
 		bind(17, mod);                       Modulus,               "mod",                   17  // y x         - rem
         bind(18, andb);                      And,                   "and",                   18  // y x         - result
         bind(19, orb);                       Or,                    "or",                    19  // y x         - result
@@ -85,9 +82,9 @@ WORD  	MOD	'(n1 n2 - n3)' "Divide n1 by n2 and leave the remainder in n3 using s
 //        bind(29, neg);                      Negate,                "neg",                   29  // x           - -x
 //        bind(30, inc);                      Increment,             "1+",                    30  // x           - x+1
 //        bind(31, dec);                      Decrement,             "1-",                    31  // x           - x-1
-        bind(32, drop);                     Drop,                  "drop",                  32  // x           -
-        bind(33, dup);                      Duplicate,             "dup",                   33  // x           - x x
-        bind(34, swap);                      Swap,                  "swap",                  34  // y x         - x y
+//        bind(32, drop);                     Drop,                  "drop",                  32  // x           -
+//        bind(33, dup);                      Duplicate,             "dup",                   33  // x           - x x
+//        bind(34, swap);                      Swap,                  "swap",                  34  // y x         - x y
         bind(35, pick);                      Pick,                  "pick",                  35  // n           - val
         bind(36, roll);                      Roll,                  "roll",                  36  // n           -
         bind(37, clr);                       Clear,                 "clear",                 37  //             -
@@ -104,6 +101,19 @@ WORD  	MOD	'(n1 n2 - n3)' "Divide n1 by n2 and leave the remainder in n3 using s
         bind(47, stopLoop);                  StopLoop,              "stopLoop",              47  //             -
         bind(48, resetBoard);                Reset,                 "(reset)",               48  //             -
 
+        bind(58, next);
+        bind(59, nop);
+
+// Words
+        bind(13, add);                       Add,                   "+",                     13  // y x         - sum
+        bind(16, div);                       Divide,                "/",                     16  // y x         - quot
+
+// Not implemented.
+        bind(4,  eventHeader);               EventHeader,           "event{",                4   // id          -
+        bind(5,  eventBody8);              EventBody8,            "cdata",                 5   // val         -
+        bind(6,  eventBody16);               EventBody16,           "data",                  6   // val         -
+        bind(7,  eventFooter);               EventFooter,           "}event",                7   //             -
+        bind(8,  eventOp);                     Event,                 "event",                 8   // val id      -
         bind(49, pinMode);                   PinMode,               "pinMode",               49  // mode pin    -
         bind(50, digitalRead);               DigitalRead,           "digitalRead",           50  // pin         - val
         bind(51, digitalWrite);              DigitalWrite,          "digitalWrite",          51  // val pin     -
@@ -113,8 +123,6 @@ WORD  	MOD	'(n1 n2 - n3)' "Divide n1 by n2 and leave the remainder in n3 using s
         bind(55, detachISR);                 DetachISR,             "detachISR",             55  // i           -
         bind(56, milliseconds);              Milliseconds,          "milliseconds",          56  //             - millis
         bind(57, pulseIn);                   PulseIn,               "pulseIn",               57] // val pin     - duration
-        bind(58, next);
-        bind(59, nop);
 
 
 

@@ -7,25 +7,27 @@
 	SC_OP_NEGATE,  \
 	SC_OP_ZERO_EQUALS,  \
 	SC_OP_INVERT,  \
-	SC_OP_INC,  \
-	SC_OP_DEC,  \
 	SC_OP_MINUS,  \
 	SC_OP_TIMES,  \
 	SC_OP_SLASH_MOD,  \
+	SC_OP_DROP,  \
+	SC_OP_DUP,  \
+	SC_OP_SWAP,  \
 
 #define SC_JUMPS \
-&&lit8, &&lit, &&fault, &&negate, &&zero_equals, &&invert, &&inc, &&dec, &&minus, &&times, &&slash_mod
+&&lit8, &&lit, &&fault, &&negate, &&zero_equals, &&invert, &&minus, &&times, &&slash_mod, &&drop, &&dup, &&swap
 
 #define SC_SNIPPETS \
-	lit8: CHECK_FAULT(c = heap_read_byte_ip()); VERIFY_U_CAN_PUSH(1); u_push(c); goto next; \
-	lit: CHECK_FAULT(v = heap_read_cell_ip()); VERIFY_U_CAN_PUSH(1); u_push(v); goto next; \
+	lit8: VERIFY_U_CAN_PUSH(1); CHECK_FAULT(c = heap_read_byte_ip()); u_push(c); goto next; \
+	lit: VERIFY_U_CAN_PUSH(1); CHECK_FAULT(v = heap_read_cell_ip()); u_push(v); goto next; \
 	fault: VERIFY_U_CAN_POP(1); SET_FAULT(u_pop()); goto next; \
 	negate: UNOP(-); goto next; \
 	zero_equals: VERIFY_U_CAN_POP(1); u_tos = u_tos ? 0 : -1; goto next; \
 	invert: VERIFY_U_CAN_POP(1); UNOP(~); goto next; \
-	inc: VERIFY_U_CAN_POP(1); u_tos += 1; goto next; \
-	dec: VERIFY_U_CAN_POP(1); u_tos -= 1; goto next; \
 	minus: BINOP(-); goto next; \
 	times: BINOP(*); goto next; \
 	slash_mod: VERIFY_U_CAN_POP(2); div_t r; r = div(u_nos, u_tos); u_tos = r.rem; u_nos = r.quot; goto next; \
+	drop: VERIFY_U_CAN_POP(1); u_drop(); goto next; \
+	dup: VERIFY_U_CAN_POP(1); VERIFY_U_CAN_PUSH(1); v = u_tos; u_push(v); goto next; \
+	swap: VERIFY_U_CAN_POP(2); v = u_tos; u_tos = u_nos; u_nos = v; goto next; \
 

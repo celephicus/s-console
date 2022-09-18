@@ -82,13 +82,14 @@ extern ScState g_sc_state;
 
 #define ELEMENT_COUNT(a_) (sizeof(a_) / sizeof (a_[0]))
 
-/* User stack operations. Designed to be called from a function where `CTX' points to a ScContext. 
+/* User stack operations. Designed to be called where `CTX' points to a ScContext. 
 	Basic functions are pop, push, clear; tos & nos are top & next item on stack.
 	stackbase is a factor for a few macros.
 	depth is the number of items on the stack, and free() is the number of free spaces before it overflows.
 	can_pop/can_push checks if can push/pop the user stack by the specified number of items.
 */
 #define u_pop() (*(CTX->u_sp++))
+#define u_drop() (CTX->u_sp++)
 #define u_push(x_) (*--CTX->u_sp = (sc_cell_t)(x_))
 #define u_size() ELEMENT_COUNT(CTX->u_stack)
 #define u_stackbase (CTX->u_stack + u_size())
@@ -102,6 +103,7 @@ extern ScState g_sc_state;
 #define u_can_push(n_) ((n_) <= u_free())
 
 // Return stack operations are a copy of those for the user stack but with `u_' replaced with `r_'
+//TODO: Automate R stack macros!
 #define r_pop() (*(CTX->r_sp++))
 #define r_push(x_) *--CTX->r_sp = (sc_cell_t)(x_); 
 #define r_size() ELEMENT_COUNT(CTX->r_stack)
@@ -122,7 +124,7 @@ extern ScState g_sc_state;
 	* there may be memory above this to implement multiple processes or similar. 
 	Byte and cell accesses are allowed, but the byte access (read or write) may not cross the boundary.
 	Writes are obviously not allowed to the read only area.
-	Read/write errors generate distinct errors
+	Illegal read/write generate distinct errors.
 */
 
 // Instructions...

@@ -31,10 +31,14 @@
 PRIMOP 	LIT8	'( - c)' "Pushes next byte in instruction stream." [hide] { VERIFY_U_CAN_PUSH(1); CHECK_FAULT(c = heap_read_byte_ip()); u_push(c); }
 PRIMOP 	LIT		'( - v)' "Pushes next cell in instruction stream." [hide] { VERIFY_U_CAN_PUSH(1); CHECK_FAULT(v = heap_read_cell_ip()); u_push(v); }
 PRIMOP 	FAULT	'(n - )' "Sets fault state from stack.Stops VM." [] { VERIFY_U_CAN_POP(1); SET_FAULT(u_pop()); }
+PRIMOP  EMIT 	'(c - )' "Write the character to the console." [] { VERIFY_U_CAN_POP(1); CTX->putc(u_pop()); }
+PRIMOP  KEY 	'( - c|-1)' "Return a character read from the console, or -1 if none." [] { VERIFY_U_CAN_PUSH(1); u_push(CTX->getc()); }
 
 # Memory fetch/store.
-PRIMOP  @	'(addr - v)' "Read cell value at addr" [n=fetch] { VERIFY_U_CAN_POP(1); u_tos = scHeapReadCell(u_tos); }
-PRIMOP  C@	'(addr - v)' "Read byte value at addr" [n=c_fetch] { VERIFY_U_CAN_POP(1); u_tos = scHeapReadByte(u_tos); }
+PRIMOP  @	'(addr - v)' "Read cell value at addr." [n=fetch] { VERIFY_U_CAN_POP(1); u_tos = scHeapReadCell(u_tos); }
+PRIMOP  !	'(v addr - )' "Write cell value at addr " [n=store] { VERIFY_U_CAN_POP(2); v = u_pop(); scHeapWriteCell(v, u_pop()); }
+PRIMOP  C@	'(addr - c)' "Read byte value at addr " [n=c_fetch] { VERIFY_U_CAN_POP(1); u_tos = scHeapReadByte(u_tos); }
+PRIMOP  C!	'(c addr - )' "Write byte value at addr " [n=c_store] { VERIFY_U_CAN_POP(2); v = u_pop(); scHeapWriteByte(v, u_pop()); }
 
 # Unary operators.
 PRIMOP  NEGATE	'(n - -n)' "Change sign of signed value on TOS." [] { UNOP(-); }
@@ -52,6 +56,7 @@ PRIMOP  /MOD	'(n1 n2 - n3 n4)' "Divide  n1 by n2 and leave the remainder n3 and 
 PRIMOP  DROP	'(v - )' "Discard top item from stack." [] { VERIFY_U_CAN_POP(1); u_drop(); }
 PRIMOP  DUP		'(v - v v)' "Duplicate top item from stack." [] { VERIFY_U_CAN_POP(1); VERIFY_U_CAN_PUSH(1); v = u_tos; u_push(v); }
 PRIMOP  SWAP	'(v1 v2 - v2 v1)' "Duplicate top item from stack." [] { VERIFY_U_CAN_POP(2); v = u_tos; u_tos = u_nos; u_nos = v; }
+PRIMOP  CLEAR	'( - <empty>)' "Clear stack." [] { u_reset(); }
 
 IGNORE
 
@@ -65,10 +70,10 @@ WORD  	MOD	'(n1 n2 - n3)' "Divide n1 by n2 and leave the remainder in n3 using s
 //        bind(1,  lit8);
 //        bind(2,  lit16);
         bind(3,  quote);
-        bind(9,  fetch8);                    Fetch8,                "c@",                    9   // addr        - val
-        bind(10, store8);                    Store8,                "c!",                    10  // val addr    -
-        bind(11, fetch16);                   Fetch16,               "@",                     11  // addr        - val
-        bind(12, store16);                   Store16,               "!",                     12  // val addr    -
+//        bind(9,  fetch8);                    Fetch8,                "c@",                    9   // addr        - val
+//        bind(10, store8);                    Store8,                "c!",                    10  // val addr    -
+//        bind(11, fetch16);                   Fetch16,               "@",                     11  // addr        - val
+//        bind(12, store16);                   Store16,               "!",                     12  // val addr    -
 //        bind(14, sub);                       Subtract,              "-",                     14  // y x         - diff
 //        bind(15, mul);                       Multiply,              "*",                     15  // y x         - prod
 		bind(17, mod);                       Modulus,               "mod",                   17  // y x         - rem
@@ -91,7 +96,7 @@ WORD  	MOD	'(n1 n2 - n3)' "Divide n1 by n2 and leave the remainder in n3 using s
 //        bind(34, swap);                      Swap,                  "swap",                  34  // y x         - x y
         bind(35, pick);                      Pick,                  "pick",                  35  // n           - val
         bind(36, roll);                      Roll,                  "roll",                  36  // n           -
-        bind(37, clr);                       Clear,                 "clear",                 37  //             -
+//        bind(37, clr);                       Clear,                 "clear",                 37  //             -
 
         bind(38, pushr);                     Push,                  "push",                  38  // x           -   (to return)
         bind(39, popr);                      Pop,                   "pop",                   39  //             - x (from return)

@@ -14,7 +14,7 @@ CurrentFileName        :=
 CurrentFilePath        :=
 CurrentFileFullPath    :=
 User                   :=admin
-Date                   :=18/09/2022
+Date                   :=19/09/2022
 CodeLitePath           :="C:/Program Files/CodeLite"
 MakeDirCommand         :=mkdir
 LinkerName             :=C:/msys64/mingw64/bin/g++.exe
@@ -93,6 +93,7 @@ $(IntermediateDirectory)/.d:
 PreBuild:
 	@echo Executing Pre Build commands ...
 	python ..\grm.py -v -o ..\main.c ..\test*.c
+	python ..\..\src\mk_sconsole.py  ..\..\src\sconsole.src
 	@echo Done
 
 

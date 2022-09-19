@@ -4,7 +4,12 @@
 	SC_OP_LIT8,  \
 	SC_OP_LIT,  \
 	SC_OP_FAULT,  \
+	SC_OP_EMIT,  \
+	SC_OP_KEY,  \
 	SC_OP_FETCH,  \
+	SC_OP_STORE,  \
+	SC_OP_C_FETCH,  \
+	SC_OP_C_STORE,  \
 	SC_OP_NEGATE,  \
 	SC_OP_ZERO_EQUALS,  \
 	SC_OP_INVERT,  \
@@ -14,15 +19,21 @@
 	SC_OP_DROP,  \
 	SC_OP_DUP,  \
 	SC_OP_SWAP,  \
+	SC_OP_CLEAR,  \
 
 #define SC_JUMPS \
-&&lit8, &&lit, &&fault, &&fetch, &&negate, &&zero_equals, &&invert, &&minus, &&times, &&slash_mod, &&drop, &&dup, &&swap
+&&lit8, &&lit, &&fault, &&emit, &&key, &&fetch, &&store, &&c_fetch, &&c_store, &&negate, &&zero_equals, &&invert, &&minus, &&times, &&slash_mod, &&drop, &&dup, &&swap, &&clear
 
 #define SC_SNIPPETS \
 	lit8: VERIFY_U_CAN_PUSH(1); CHECK_FAULT(c = heap_read_byte_ip()); u_push(c); goto next; \
 	lit: VERIFY_U_CAN_PUSH(1); CHECK_FAULT(v = heap_read_cell_ip()); u_push(v); goto next; \
 	fault: VERIFY_U_CAN_POP(1); SET_FAULT(u_pop()); goto next; \
+	emit: VERIFY_U_CAN_POP(1); CTX->putc(u_pop()); goto next; \
+	key: VERIFY_U_CAN_PUSH(1); u_push(CTX->getc()); goto next; \
 	fetch: VERIFY_U_CAN_POP(1); u_tos = scHeapReadCell(u_tos); goto next; \
+	store: VERIFY_U_CAN_POP(2); v = u_pop(); scHeapWriteCell(v, u_pop()); goto next; \
+	c_fetch: VERIFY_U_CAN_POP(1); u_tos = scHeapReadByte(u_tos); goto next; \
+	c_store: VERIFY_U_CAN_POP(2); v = u_pop(); scHeapWriteByte(v, u_pop()); goto next; \
 	negate: UNOP(-); goto next; \
 	zero_equals: VERIFY_U_CAN_POP(1); u_tos = u_tos ? 0 : -1; goto next; \
 	invert: VERIFY_U_CAN_POP(1); UNOP(~); goto next; \
@@ -32,4 +43,5 @@
 	drop: VERIFY_U_CAN_POP(1); u_drop(); goto next; \
 	dup: VERIFY_U_CAN_POP(1); VERIFY_U_CAN_PUSH(1); v = u_tos; u_push(v); goto next; \
 	swap: VERIFY_U_CAN_POP(2); v = u_tos; u_tos = u_nos; u_nos = v; goto next; \
+	clear: u_reset(); goto next; \
 

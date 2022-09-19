@@ -57,3 +57,26 @@ void testHeapRamCellBadWrite() {
 	FAULT = SC_FAULT_OK;
 }
 
+// Console read/write.
+void testHelpersPutc(const char* s) {
+	for (const char* cc = s; *cc != '\0'; cc++)
+		CTX->putc(*cc);
+	TEST_ASSERT_EQUAL_STRING(s, tsGetPutc());
+}
+TT_TEST_CASE(testHelpersPutc(""));
+TT_TEST_CASE(testHelpersPutc("x"));
+TT_TEST_CASE(testHelpersPutc("Oh, freddled gruntbuggly, thy micturations are to me..."));
+
+void testHelpersGetc(const char* s) {
+	tsSetGetc(s);
+	char b[1111];
+	char *p = b;
+	int16_t c;
+	while (-1 != (c = CTX->getc()))
+		*p++ = c;		
+	*p++ = '\0';		
+	TEST_ASSERT_EQUAL_STRING(s, b);
+}
+TT_TEST_CASE(testHelpersGetc(""));
+TT_TEST_CASE(testHelpersGetc("x"));
+TT_TEST_CASE(testHelpersGetc("Oh, freddled gruntbuggly, thy micturations are to me..."));

@@ -16,29 +16,34 @@ void setup_test_vm() {
 	addr = 0;
 }
 void destroy_test_vm() {
-	TEST_ASSERT_EQUAL(0, u_depth());
-	TEST_ASSERT_EQUAL(0, r_depth());
+	TEST_ASSERT_EQUAL_MESSAGE(0, u_depth(), "u_depth");
+	TEST_ASSERT_EQUAL_MESSAGE(0, r_depth(), "r_depth");
 	ts_DestroyStackTestContext();
 }
 
-TT_BEGIN_FIXTURE(setup_test_vm, NULL, destroy_test_vm);
+#include <stdio.h>
+void dump_test_vm() {
+	printf("\n  U stack: ");
+	for (int i = u_depth(); i > 0; --i)
+		printf("%d ", u_peek(i-1));
+}
+TT_BEGIN_FIXTURE(setup_test_vm, dump_test_vm, destroy_test_vm);
 
 // Test return value of scRun against expected value, FAULT state & IP. 
-#define TEST_ASSERT_RUN(n_, fault_, ip_exp_) do {	\
-	TEST_ASSERT_EQUAL((fault_), scRun(n_));			\
-	TEST_ASSERT_EQUAL((ip_exp_), IP);				\
-	TEST_ASSERT_EQUAL((fault_), FAULT);				\
-	FAULT = 0;										\
+#define TEST_ASSERT_RUN(n_, fault_, ip_exp_) do {						\
+	TEST_ASSERT_EQUAL_MESSAGE((fault_), scRun(n_), "scRun() retval");	\
+	TEST_ASSERT_EQUAL_MESSAGE((ip_exp_), IP, "IP");						\
+	TEST_ASSERT_EQUAL_MESSAGE((fault_), FAULT, "FAULT");				\
+	FAULT = 0;															\
 } while (0)
 
-// Verify stack contents and clear.
+// Verify stack contents.
 static void verify_stack(int depth, ...) {
 	va_list ap;
 	TEST_ASSERT_EQUAL(depth, u_depth());
 	va_start(ap, depth);
 	while (--depth >= 0)
 		TEST_ASSERT_EQUAL(va_arg(ap, sc_cell_t), u_peek(depth));
-	u_reset();
 }
 
 // Tests for sc_Run behaviour, num instructions & bad opcodes.
@@ -77,6 +82,33 @@ void testVmOpFaultFail() {	// Check stack underflow on FAULT opcode.
 	TS_ASSEMBLER_CODE(&addr, SC_OP_FAULT); 
 	TEST_ASSERT_RUN(1, SC_FAULT_U_STACK_UFLOW, 1);
 }
+
+void testVmIpOverrun() {	// Verify fault on IP going out of range. 
+	addr = SC_HEAP_SIZE-1;
+	TS_ASSEMBLER_CODE(&addr, SC_OP_SWAP);
+	IP = SC_HEAP_SIZE-1;
+	u_push(1234);
+	u_push(5678);
+
+	TEST_ASSERT_RUN(1, SC_FAULT_OK, SC_HEAP_SIZE);		// Run last instruction OK, but IP now out of range.
+	verify_stack(2, 5678, 1234);
+	u_reset();
+	TEST_ASSERT_RUN(1, SC_FAULT_BAD_IP, SC_HEAP_SIZE+1);	// Now should set IP fault. IP goes to next, which is also illegal. 
+}
+
+void testVmOpOverrun(uint8_t op, uint8_t sz) {	// Load FIRST byte from IP outside memory.
+	addr = SC_HEAP_SIZE-1;
+	TS_ASSEMBLER_CODE(&addr, op);
+	IP = SC_HEAP_SIZE-1;
+	TEST_ASSERT_RUN(1, SC_FAULT_BAD_IP, SC_HEAP_SIZE+sz);	
+}
+	
+void testVmOpOverrun2(uint8_t op, uint8_t sz) {	// Load SECOND byte from IP outside memory.
+	addr = SC_HEAP_SIZE-2;
+	TS_ASSEMBLER_CODE(&addr, op, 0);
+	IP = SC_HEAP_SIZE-2;
+	TEST_ASSERT_RUN(1, SC_FAULT_BAD_IP, SC_HEAP_SIZE-1+sz);	
+}
 	
 // Helpers for unary ops.
 void testVmUnop(uint8_t op, sc_cell_t a, sc_cell_t r) { // Verify unary op result.
@@ -84,6 +116,7 @@ void testVmUnop(uint8_t op, sc_cell_t a, sc_cell_t r) { // Verify unary op resul
 	u_push(a);
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1);
 	verify_stack(1, r);
+	u_reset();
 }
 void testBinop(uint8_t op, sc_cell_t a1, sc_cell_t a2, sc_cell_t r) {  // Verify binary op result.
 	TS_ASSEMBLER_CODE(&addr, op);
@@ -91,6 +124,7 @@ void testBinop(uint8_t op, sc_cell_t a1, sc_cell_t a2, sc_cell_t r) {  // Verify
 	u_push(a2);
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1);
 	verify_stack(1, r);
+	u_reset();
 }
 void testVmOp_FailUnderflow(uint8_t op, int n_args) { // Verify operator sets fault on underflow with N items on stack
 	TS_ASSEMBLER_CODE(&addr, op);
@@ -113,19 +147,22 @@ void testVmOp_FailOverflow(uint8_t op, int n_free) { // Verify operator sets fau
 // LIT8 -- byte literal.
 void testByteLiteral() {
 	TS_ASSEMBLER_CODE(&addr, SC_OP_LIT8, 122);
-	
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 2);
 	verify_stack(1, 122);
+	u_reset();
 }
+TT_TEST_CASE(testVmOpOverrun(SC_OP_LIT8, 1));
 
 // LIT -- cell literal. 
 void testCellLiteral() {
 	TS_ASSEMBLER_CODE(&addr, SC_OP_LIT);
 	TS_ASSEMBLER_CELL(&addr, 0x12345678);
-	
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1+sizeof(sc_cell_t));
 	verify_stack(1, 0x12345678);
+	u_reset();
 }
+TT_TEST_CASE(testVmOpOverrun(SC_OP_LIT, sizeof(sc_cell_t)));	
+TT_TEST_CASE(testVmOpOverrun2(SC_OP_LIT, sizeof(sc_cell_t)));	
 
 // NEG -- Unary minus
 TT_TEST_CASE(testVmUnop(SC_OP_NEGATE, 0x12345678, -0x12345678));
@@ -155,6 +192,7 @@ void testSlashMod(sc_cell_t a1, sc_cell_t a2, sc_cell_t q, sc_cell_t r) {
 	u_push(a2);
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1);
 	verify_stack(2, q, r);
+	u_reset();
 }
 TT_TEST_CASE(testSlashMod(38, 5, 38/5, 38%5));
 TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_SLASH_MOD, 1));
@@ -174,6 +212,7 @@ void testVmOpDup() { 	// DUP
 	u_push(1234);
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1);
 	verify_stack(2, 1234, 1234);
+	u_reset();
 }
 TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_DUP, 0));
 TT_TEST_CASE(testVmOp_FailOverflow(SC_OP_DUP, 0));
@@ -184,46 +223,87 @@ void testVmOpSwap() { 	// SWAP
 	u_push(5678);
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1);
 	verify_stack(2, 5678, 1234);
+	u_reset();
 }
 TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_SWAP, 0));
 TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_SWAP, 1));
 
+// @ -- Fetch CELL from address. 
+void testVmOpFetchCell(uint16_t op_addr, uint16_t val_addr, uint8_t fault) {
+	addr = op_addr; TS_ASSEMBLER_CODE(&addr, SC_OP_FETCH); IP = op_addr;
+	if (!fault) {
+		addr = val_addr; TS_ASSEMBLER_CELL(&addr, 1234);
+	}
+	u_push(val_addr);
+		TEST_ASSERT_RUN(1, fault, op_addr+1);
+	if (!fault) 
+		verify_stack(1, 1234);
+	u_reset();
+}
+TT_TEST_CASE(testVmOpFetchCell(0, 1, SC_FAULT_OK));
+TT_TEST_CASE(testVmOpFetchCell(SC_HEAP_SIZE-1, 1, SC_FAULT_OK));
+TT_TEST_CASE(testVmOpFetchCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t), SC_FAULT_OK));
+TT_TEST_CASE(testVmOpFetchCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t)+1, SC_FAULT_MEM));
+TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_FETCH, 0));
+
+// @ -- Fetch BYTE from address. 
+void testVmOpFetchByte(uint16_t op_addr, uint16_t val_addr, uint8_t fault) {
+	addr = op_addr; TS_ASSEMBLER_CODE(&addr, SC_OP_C_FETCH); IP = op_addr;
+	if (!fault) {
+		addr = val_addr; TS_ASSEMBLER_CODE(&addr, 123);
+	}
+	u_push(val_addr);
+		TEST_ASSERT_RUN(1, fault, op_addr+1);
+	if (!fault) 
+		verify_stack(1, 123);
+	u_reset();
+}
+TT_TEST_CASE(testVmOpFetchByte(0, 1, SC_FAULT_OK));
+TT_TEST_CASE(testVmOpFetchByte(SC_HEAP_SIZE-1, 1, SC_FAULT_OK));
+TT_TEST_CASE(testVmOpFetchByte(0, SC_HEAP_SIZE-1, SC_FAULT_OK));
+TT_TEST_CASE(testVmOpFetchByte(0, SC_HEAP_SIZE, SC_FAULT_MEM));
+TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_C_FETCH, 0));
+
+// ! -- Store CELL to address. 
+void testVmOpStoreCell(uint16_t op_addr, uint16_t val_addr, uint8_t fault) {
+	addr = op_addr; TS_ASSEMBLER_CODE(&addr, SC_OP_STORE); IP = op_addr;
+	u_push(1234);
+	u_push(val_addr);
+	TEST_ASSERT_RUN(1, fault, op_addr+1);
+	if (!fault) 
+		TEST_ASSERT_EQUAL_SC_CELL(1234, *(sc_cell_t*)&g_sc_state.heap[val_addr]);
+	u_reset();
+}
+TT_TEST_CASE(testVmOpStoreCell(0, 1, SC_FAULT_OK));
+TT_TEST_CASE(testVmOpStoreCell(SC_HEAP_SIZE-1, 1, SC_FAULT_OK));
+TT_TEST_CASE(testVmOpStoreCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t), SC_FAULT_OK));
+TT_TEST_CASE(testVmOpStoreCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t)+1, SC_FAULT_MEM));
+TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_STORE, 0));
+TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_STORE, 1));
+
+// ! -- Store BYTE to address. 
+void testVmOpStoreByte(uint16_t op_addr, uint16_t val_addr, uint8_t fault) {
+	addr = op_addr; TS_ASSEMBLER_CODE(&addr, SC_OP_C_STORE); IP = op_addr;
+	u_push(123);
+	u_push(val_addr);
+	TEST_ASSERT_RUN(1, fault, op_addr+1);
+	if (!fault) 
+		TEST_ASSERT_EQUAL_SC_CELL(123, g_sc_state.heap[val_addr]);
+	u_reset();
+}
+TT_TEST_CASE(testVmOpStoreByte(0, 1, SC_FAULT_OK));
+TT_TEST_CASE(testVmOpStoreByte(SC_HEAP_SIZE-1, 1, SC_FAULT_OK));
+TT_TEST_CASE(testVmOpStoreByte(0, SC_HEAP_SIZE-1, SC_FAULT_OK));
+TT_TEST_CASE(testVmOpStoreByte(0, SC_HEAP_SIZE, SC_FAULT_MEM));
+TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_C_STORE, 0));
+TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_C_STORE, 1));
+
+// Clear stack.
+void testVmOpClear() {
+	TS_ASSEMBLER_CODE(&addr, SC_OP_CLEAR); 
+	u_push(123);
+	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1);
+	TEST_ASSERT_EQUAL(0, u_depth());
+}
+
 TT_IGNORE_FROM_HERE()
-/*
-void testLoad() {
-	CODE(OP_LIT, 6, OP_LOAD, OP_FAULT, FAULT_USER, 0, 122);
-	
-	TEST_ASSERT_EQUAL(FAULT_USER, scRun(-1));
-	TEST_ASSERT_EQUAL(5, IP);	
-	TEST_ASSERT_EQUAL(122, val);
-}
-
-void testLoadBad() {
-	CODE(OP_LIT, 66, OP_LOAD, OP_FAULT, FAULT_USER, 0, 122);
-	TEST_ASSERT_EQUAL(FAULT_MEM, scRun(-1));
-	TEST_ASSERT_EQUAL(3, IP);	
-}
-
-void testOverrun1() {
-	code[VM_CODE_SIZE-1] = OP_INC;
-	IP = VM_CODE_SIZE-1;
-	
-	TEST_ASSERT_EQUAL(FAULT_OK, scRun(1));		// Run last instruction OK.
-	TEST_ASSERT_EQUAL(VM_CODE_SIZE, IP);	
-	TEST_ASSERT_EQUAL(1, val);
-	
-	TEST_ASSERT_EQUAL(FAULT_BAD_IP, scRun(1));		// Now should fault as outside memory space.
-	TEST_ASSERT_EQUAL(VM_CODE_SIZE+1, IP);			// IP goes to next, which is also illegal. 
-	TEST_ASSERT_EQUAL(1, val);
-}
-
-void testOverrun2() {
-	code[VM_CODE_SIZE-1] = OP_LIT; 
-	IP = VM_CODE_SIZE-1;
-	
-	TEST_ASSERT_EQUAL(FAULT_BAD_IP, scRun(1));	// Opcode OK, but loads from IP which is now out of memory.
-	TEST_ASSERT_EQUAL(VM_CODE_SIZE+1, IP);		// IP goes to next, which is also illegal, so does not inrement again as is normal for LITx. 
-	// Value of val is now undefined. 
-}
-
-*/

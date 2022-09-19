@@ -32,6 +32,10 @@ sc_cell_t scHeapReadCell(sc_cell_t offs);
 
 #include "sconsole.auto.h"
 
+// Functions to read/write a character to the context's console.
+typedef void (*sc_putc_func)(char);
+typedef int16_t (*sc_getc_func)();
+
 // The context, holds the current state of a sconsole process. 
 typedef struct  __attribute__((packed)) ScContext {
 #ifdef TEST
@@ -54,6 +58,8 @@ typedef struct  __attribute__((packed)) ScContext {
 
 	sc_cell_t fault;		// Set non-zero on error.
 	sc_cell_t ip;		// Index of next instruction to be executed. 
+	sc_putc_func putc;
+	sc_getc_func getc;
 } ScContext;
 
 // State of Sconsole. Contains heap and some global variables used by all sconsole processes.

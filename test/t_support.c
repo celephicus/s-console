@@ -29,12 +29,29 @@ void ts_DestroyScGlobals() {
     memset(&g_sc_state, 0x00, sizeof(ScState));
 }
 
+char ts_put[50];
+char* ts_putp;
+void ts_putc(char c) { *ts_putp++ = c; }
+char* tsGetPutc() { *ts_putp = '\0'; return ts_put; }
+
+char ts_get[50];
+char* ts_getp;
+int16_t ts_getc() { return ('\0' == *ts_getp) ? -1 : *ts_getp++; }
+void tsSetGetc(const char* s) { strcpy(ts_get, s); }
+
 void ts_SetupStackTestContext() {
 	// Build context.
     ScContext* ctx = malloc(sizeof(ScContext));
     ctx->t_u_stack_pre = ctx->t_u_stack_post = 0x12345678;
     ctx->t_r_stack_pre = ctx->t_r_stack_post = 0x12345678;
     scInitContext(ctx);
+	
+	// Set console read/write functions.
+	ctx->getc = ts_getc;
+	ctx->putc = ts_putc;
+	ts_putp = ts_put;
+	ts_get[0] = '\0';
+	ts_getp = ts_get;
 	
 	// Set to state.
     ts_SetupScGlobals(ctx);

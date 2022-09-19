@@ -54,6 +54,7 @@
       </Debugger>
       <PreBuild>
         <Command Enabled="yes">python ..\grm.py -v -o ..\main.c ..\test*.c</Command>
+        <Command Enabled="yes">python ..\..\src\mk_sconsole.py  ..\..\src\sconsole.src</Command>
       </PreBuild>
       <PostBuild/>
       <CustomBuild Enabled="no">

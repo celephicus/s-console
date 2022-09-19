@@ -7,6 +7,9 @@ void ts_DestroyScGlobals();
 void ts_SetupStackTestContext();
 void ts_DestroyStackTestContext();
 
+void tsSetGetc(const char* s);
+char* tsGetPutc();
+
 // Assembler for the heap.
 // Write some 8 bit values at address pointed to by first arg.
 #define TS_ASSEMBLER_CODE(addr_, ...)	do {				\

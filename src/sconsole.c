@@ -45,7 +45,7 @@ static sc_cell_t heap_read_cell_ip() {
 #define VERIFY_IP() do { if (!VERIFY_VAL_FOR_IP(IP)) SET_FAULT(SC_FAULT_BAD_IP); } while (0)
 
 /* Some helper functions & macros for commands. */
-#define BINOP(op_) do { VERIFY_U_CAN_POP(2); v = u_pop(); u_tos = u_tos op_ v; } while (0)
+#define BINOP(op_) do { VERIFY_U_CAN_POP(2); scratch.cell = u_pop(); u_tos = u_tos op_ scratch.cell; } while (0)
 #define UNOP(op_) do { VERIFY_U_CAN_POP(1); u_tos = op_ u_tos; } while (0)
 
 #define VERIFY_U_CAN_POP(n_) if (u_can_pop(n_)) {} else SET_FAULT(SC_FAULT_U_STACK_UFLOW)
@@ -55,9 +55,12 @@ static sc_cell_t heap_read_cell_ip() {
 	
 uint8_t scRun(int n) {
 	static const void* OPS[] = { SC_JUMPS };
-		uint8_t c;		// Scratchpad
-		sc_cell_t v;	// Scratchpad
-
+	union Scratch {
+		uint8_t u8;		
+		sc_cell_t cell;	
+		uint16_t u16;
+	} scratch;
+	
 	if (FAULT) 			// Cannot run in fault state.
 		return FAULT;
 		
@@ -71,12 +74,14 @@ next:
 	// last_ip = IP;	// Store last IP to restore it on fault.
 	CHECK_FAULT(op = heap_read_byte_ip());	// Load opcode, increment IP,  maybe flag IP out of range. 
 	
-	if (op & 0x80) {
-		r_push(IP+1);
-		CHECK_FAULT(IP = ((uint16_t)(op & ~0x80) << 8) | (uint16_t)heap_read_byte_ip()); // Set fault if second byte of address out or range.
-		VERIFY_IP();		// Chek call addess in range.
+	if (op & 0x80) {		// Looks like a call...
+		CHECK_FAULT(scratch.u16 = ((uint16_t)(op & ~0x80) << 8) | (uint16_t)heap_read_byte_ip()); // Set fault if second byte of address out or range.
+		r_push(IP);
+		IP = scratch.u16;
+		VERIFY_IP();		// Check call addess in range.
 		goto next;
 	}
+	
 	if (op >= ELEMENT_COUNT(OPS))	// Illegal opcode.
 		SET_FAULT(SC_FAULT_BAD_OPCODE);
 		

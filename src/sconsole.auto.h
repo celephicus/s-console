@@ -4,6 +4,7 @@
 	SC_OP_LIT8,  \
 	SC_OP_LIT,  \
 	SC_OP_FAULT,  \
+	SC_OP_FETCH,  \
 	SC_OP_NEGATE,  \
 	SC_OP_ZERO_EQUALS,  \
 	SC_OP_INVERT,  \
@@ -15,12 +16,13 @@
 	SC_OP_SWAP,  \
 
 #define SC_JUMPS \
-&&lit8, &&lit, &&fault, &&negate, &&zero_equals, &&invert, &&minus, &&times, &&slash_mod, &&drop, &&dup, &&swap
+&&lit8, &&lit, &&fault, &&fetch, &&negate, &&zero_equals, &&invert, &&minus, &&times, &&slash_mod, &&drop, &&dup, &&swap
 
 #define SC_SNIPPETS \
 	lit8: VERIFY_U_CAN_PUSH(1); CHECK_FAULT(c = heap_read_byte_ip()); u_push(c); goto next; \
 	lit: VERIFY_U_CAN_PUSH(1); CHECK_FAULT(v = heap_read_cell_ip()); u_push(v); goto next; \
 	fault: VERIFY_U_CAN_POP(1); SET_FAULT(u_pop()); goto next; \
+	fetch: VERIFY_U_CAN_POP(1); u_tos = scHeapReadCell(u_tos); goto next; \
 	negate: UNOP(-); goto next; \
 	zero_equals: VERIFY_U_CAN_POP(1); u_tos = u_tos ? 0 : -1; goto next; \
 	invert: VERIFY_U_CAN_POP(1); UNOP(~); goto next; \

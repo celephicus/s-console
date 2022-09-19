@@ -57,7 +57,7 @@ uint8_t scRun(int n) {
 		
 next: 
 	if (0 == n) 	// Zero instructions to do so exit.
-		return SC_FAULT_OK;
+		return FAULT;	// Catch case where a word snippet has just set a fault state without jumping to fault label and exiting. 
 	if (n > 0)	// Only for non-negative n: count instructions then exit when we have done our quota. 
 		n -= 1;
     

@@ -99,7 +99,7 @@ extern ScState g_sc_state;
 #define u_push(x_) (*--CTX->u_sp = (sc_cell_t)(x_))
 #define u_size() ELEMENT_COUNT(CTX->u_stack)
 #define u_stackbase (CTX->u_stack + u_size())
-#define u_reset() CTX->u_sp = u_stackbase;
+#define u_clear() CTX->u_sp = u_stackbase;
 #define u_peek(n_) (CTX->u_sp[n_])
 #define u_tos u_peek(0)
 #define u_nos u_peek(1)
@@ -114,7 +114,7 @@ extern ScState g_sc_state;
 #define r_push(x_) *--CTX->r_sp = (sc_cell_t)(x_); 
 #define r_size() ELEMENT_COUNT(CTX->r_stack)
 #define r_stackbase (CTX->r_stack + r_size())
-#define r_reset() CTX->r_sp = r_stackbase;
+#define r_clear() CTX->r_sp = r_stackbase;
 #define r_peek(n_) (CTX->r_sp[n_])
 #define r_tos r_peek(0)
 #define r_nos r_peek(1)

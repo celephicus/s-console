@@ -40,18 +40,24 @@ static sc_cell_t heap_read_cell_ip() {
 // Used in the VM to set an fault, and jump to fault handler. 
 #define SET_FAULT(err_) do { FAULT = (err_); goto f_a_u_l_t; } while (0)
 
+// Used in VM to verify IP within range. 
+#define VERIFY_VAL_FOR_IP(ip_) ((ip_) < (SC_HEAP_SIZE + SC_READ_ONLY_SIZE))
+#define VERIFY_IP() do { if (!VERIFY_VAL_FOR_IP(IP)) SET_FAULT(SC_FAULT_BAD_IP); } while (0)
+
 /* Some helper functions & macros for commands. */
 #define BINOP(op_) do { VERIFY_U_CAN_POP(2); v = u_pop(); u_tos = u_tos op_ v; } while (0)
 #define UNOP(op_) do { VERIFY_U_CAN_POP(1); u_tos = op_ u_tos; } while (0)
 
 #define VERIFY_U_CAN_POP(n_) if (u_can_pop(n_)) {} else SET_FAULT(SC_FAULT_U_STACK_UFLOW)
 #define VERIFY_U_CAN_PUSH(n_) if (u_can_push(n_)) {} else SET_FAULT(SC_FAULT_U_STACK_OFLOW)
+#define VERIFY_R_CAN_POP(n_) if (r_can_pop(n_)) {} else SET_FAULT(SC_FAULT_R_STACK_UFLOW)
+#define VERIFY_R_CAN_PUSH(n_) if (r_can_push(n_)) {} else SET_FAULT(SC_FAULT_R_STACK_OFLOW)
 	
 uint8_t scRun(int n) {
 	static const void* OPS[] = { SC_JUMPS };
-	uint8_t c;		// Scratchpad
-	sc_cell_t v;		// Scratchpad
-	
+		uint8_t c;		// Scratchpad
+		sc_cell_t v;	// Scratchpad
+
 	if (FAULT) 			// Cannot run in fault state.
 		return FAULT;
 		
@@ -65,6 +71,12 @@ next:
 	// last_ip = IP;	// Store last IP to restore it on fault.
 	CHECK_FAULT(op = heap_read_byte_ip());	// Load opcode, increment IP,  maybe flag IP out of range. 
 	
+	if (op & 0x80) {
+		r_push(IP+1);
+		CHECK_FAULT(IP = ((uint16_t)(op & ~0x80) << 8) | (uint16_t)heap_read_byte_ip()); // Set fault if second byte of address out or range.
+		VERIFY_IP();		// Chek call addess in range.
+		goto next;
+	}
 	if (op >= ELEMENT_COUNT(OPS))	// Illegal opcode.
 		SET_FAULT(SC_FAULT_BAD_OPCODE);
 		

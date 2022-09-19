@@ -59,7 +59,7 @@ void ts_SetupStackTestContext() {
 }
 void ts_DestroyStackTestContext() {
 	// Verify context & destroy.
-    TEST_ASSERT_EQUAL(SC_FAULT_OK, FAULT);
+    TEST_ASSERT_EQUAL_MESSAGE(SC_FAULT_OK, FAULT, "FAULT");
     TEST_ASSERT_EQUAL_UINT32(0x12345678, CTX->t_u_stack_pre);
     TEST_ASSERT_EQUAL_UINT32(0x12345678, CTX->t_u_stack_post);
     TEST_ASSERT_EQUAL_UINT32(0x12345678, CTX->t_r_stack_pre);

@@ -19,7 +19,7 @@ typedef uint32_t sc_ucell_t;
 
 // Read only area in const 
 #define SC_READ_ONLY_PHYS_START
-#define SC_READ_ONLY_SIZE 
+#define SC_READ_ONLY_SIZE 0
 
 // For test suite we need a checker for cell values.
 #define TEST_ASSERT_EQUAL_SC_CELL TEST_ASSERT_EQUAL_INT32

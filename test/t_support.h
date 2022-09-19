@@ -24,6 +24,9 @@ char* tsGetPutc();
 	*(addr_) += sizeof(sc_cell_t);							\
 } while (0)
 	
+// Assemble a CALL to the given 16 bit address.
+#define TS_ASSEMBLER_CALL(addr_, call_)						\
+	TS_ASSEMBLER_CODE(addr_, ((uint8_t)((call_) >> 8)) | 0x80, (uint8_t)(call_))
 
 #endif 		// T_SUPPORT_H_
 

@@ -40,16 +40,16 @@ void testRStackPopPush(void) {
 }
 
 void testRStackReset(void) {
-    r_reset();
+    r_clear();
     TEST_ASSERT_EQUAL(0, r_depth());
     r_push(1);
-    r_reset();
+    r_clear();
     TEST_ASSERT_EQUAL(0, r_depth());
 
     for (int i = 0; i < SC_R_STACK_SIZE; i += 1) 
         r_push(i);
     TEST_ASSERT_EQUAL(SC_R_STACK_SIZE, r_depth());
-    r_reset();
+    r_clear();
     TEST_ASSERT_EQUAL(0, r_depth());
 }
 

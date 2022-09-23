@@ -80,3 +80,17 @@ void testHelpersGetc(const char* s) {
 TT_TEST_CASE(testHelpersGetc(""));
 TT_TEST_CASE(testHelpersGetc("x"));
 TT_TEST_CASE(testHelpersGetc("Oh, freddled gruntbuggly, thy micturations are to me..."));
+
+// Hash & primitive lookup.
+void testHelpersHash() {
+	TEST_ASSERT_EQUAL_UINT16(0XB508, sc_hash("DEPTH"));
+	TEST_ASSERT_EQUAL_UINT16(0XB508, sc_hash("dePTh"));
+	TEST_ASSERT_EQUAL_UINT16(0X9F9C, sc_hash("CLEAR"));
+	TEST_ASSERT_EQUAL_UINT16(0X9F9C, sc_hash("clear"));
+}
+void testHelpersFindPrimitive() {
+	TEST_ASSERT_EQUAL_UINT8(SC_OP_DUP, sc_find_primitive_op(sc_hash("DUP")));
+	TEST_ASSERT_EQUAL_UINT8(SC_OP_INVERT, sc_find_primitive_op(sc_hash("INVERT")));
+	TEST_ASSERT_EQUAL_UINT8(SC_OP_LIT, sc_find_primitive_op(sc_hash("LIT")));
+	TEST_ASSERT_EQUAL_UINT8(-1, sc_find_primitive_op(sc_hash("asasacascac")));
+}

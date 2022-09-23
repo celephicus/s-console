@@ -40,6 +40,8 @@ void testHeapRamCellBadRead();
 void testHeapRamCellBadWrite();
 void testHelpersPutc(const char* s);
 void testHelpersGetc(const char* s);
+void testHelpersHash();
+void testHelpersFindPrimitive();
 void testInitContext(void);
 void testRStackInit(void);
 void testRStackSize(void);
@@ -80,7 +82,7 @@ void testVmUnop(uint8_t op, sc_cell_t a, sc_cell_t r);
 void testBinop(uint8_t op, sc_cell_t a1, sc_cell_t a2, sc_cell_t r);
 void testVmOp_FailUnderflow(uint8_t op, int n_args);
 void testVmOp_FailOverflow(uint8_t op, int n_free);
-void testByteLiteral();
+void testByteLiteral(uint8_t val);
 void testCellLiteral();
 void testSlashMod(sc_cell_t a1, sc_cell_t a2, sc_cell_t q, sc_cell_t r);
 void testVmOpDrop();
@@ -119,55 +121,58 @@ static void testHelpersPutc_stub_6(void) { testHelpersPutc("Oh, freddled gruntbu
 static void testHelpersGetc_stub_7(void) { testHelpersGetc(""); }
 static void testHelpersGetc_stub_8(void) { testHelpersGetc("x"); }
 static void testHelpersGetc_stub_9(void) { testHelpersGetc("Oh, freddled gruntbuggly, thy micturations are to me..."); }
-static void testVmOpOverrun_stub_10(void) { testVmOpOverrun(SC_OP_LIT8, 1); }
-static void testVmOpOverrun_stub_11(void) { testVmOpOverrun(SC_OP_LIT, sizeof(sc_cell_t)); }
-static void testVmOpOverrun2_stub_12(void) { testVmOpOverrun2(SC_OP_LIT, sizeof(sc_cell_t)); }
-static void testVmUnop_stub_13(void) { testVmUnop(SC_OP_NEGATE, 0x12345678, -0x12345678); }
-static void testVmOp_FailUnderflow_stub_14(void) { testVmOp_FailUnderflow(SC_OP_NEGATE, 0); }
-static void testVmUnop_stub_15(void) { testVmUnop(SC_OP_ZERO_EQUALS, 0, -1); }
-static void testVmUnop_stub_16(void) { testVmUnop(SC_OP_ZERO_EQUALS, -1, 0); }
-static void testVmUnop_stub_17(void) { testVmUnop(SC_OP_ZERO_EQUALS, 12345, 0); }
-static void testVmOp_FailUnderflow_stub_18(void) { testVmOp_FailUnderflow(SC_OP_ZERO_EQUALS, 0); }
-static void testBinop_stub_19(void) { testBinop(SC_OP_MINUS, 0x12345678, -1, 0x12345679); }
-static void testVmOp_FailUnderflow_stub_20(void) { testVmOp_FailUnderflow(SC_OP_MINUS, 1); }
-static void testVmOp_FailUnderflow_stub_21(void) { testVmOp_FailUnderflow(SC_OP_MINUS, 0); }
-static void testBinop_stub_22(void) { testBinop(SC_OP_TIMES, 1234, 5678, 1234*5678); }
-static void testVmOp_FailUnderflow_stub_23(void) { testVmOp_FailUnderflow(SC_OP_TIMES, 1); }
-static void testVmOp_FailUnderflow_stub_24(void) { testVmOp_FailUnderflow(SC_OP_TIMES, 0); }
-static void testSlashMod_stub_25(void) { testSlashMod(38, 5, 38/5, 38%5); }
-static void testVmOp_FailUnderflow_stub_26(void) { testVmOp_FailUnderflow(SC_OP_SLASH_MOD, 1); }
-static void testVmOp_FailUnderflow_stub_27(void) { testVmOp_FailUnderflow(SC_OP_SLASH_MOD, 0); }
-static void testVmOp_FailUnderflow_stub_28(void) { testVmOp_FailUnderflow(SC_OP_DROP, 0); }
-static void testVmOp_FailUnderflow_stub_29(void) { testVmOp_FailUnderflow(SC_OP_DUP, 0); }
-static void testVmOp_FailOverflow_stub_30(void) { testVmOp_FailOverflow(SC_OP_DUP, 0); }
-static void testVmOp_FailUnderflow_stub_31(void) { testVmOp_FailUnderflow(SC_OP_SWAP, 0); }
-static void testVmOp_FailUnderflow_stub_32(void) { testVmOp_FailUnderflow(SC_OP_SWAP, 1); }
-static void testVmOpFetchCell_stub_33(void) { testVmOpFetchCell(0, 1, SC_FAULT_OK); }
-static void testVmOpFetchCell_stub_34(void) { testVmOpFetchCell(SC_HEAP_SIZE-1, 1, SC_FAULT_OK); }
-static void testVmOpFetchCell_stub_35(void) { testVmOpFetchCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t), SC_FAULT_OK); }
-static void testVmOpFetchCell_stub_36(void) { testVmOpFetchCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t)+1, SC_FAULT_MEM); }
-static void testVmOp_FailUnderflow_stub_37(void) { testVmOp_FailUnderflow(SC_OP_FETCH, 0); }
-static void testVmOpFetchByte_stub_38(void) { testVmOpFetchByte(0, 1, SC_FAULT_OK); }
-static void testVmOpFetchByte_stub_39(void) { testVmOpFetchByte(SC_HEAP_SIZE-1, 1, SC_FAULT_OK); }
-static void testVmOpFetchByte_stub_40(void) { testVmOpFetchByte(0, SC_HEAP_SIZE-1, SC_FAULT_OK); }
-static void testVmOpFetchByte_stub_41(void) { testVmOpFetchByte(0, SC_HEAP_SIZE, SC_FAULT_MEM); }
-static void testVmOp_FailUnderflow_stub_42(void) { testVmOp_FailUnderflow(SC_OP_C_FETCH, 0); }
-static void testVmOpStoreCell_stub_43(void) { testVmOpStoreCell(0, 1, SC_FAULT_OK); }
-static void testVmOpStoreCell_stub_44(void) { testVmOpStoreCell(SC_HEAP_SIZE-1, 1, SC_FAULT_OK); }
-static void testVmOpStoreCell_stub_45(void) { testVmOpStoreCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t), SC_FAULT_OK); }
-static void testVmOpStoreCell_stub_46(void) { testVmOpStoreCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t)+1, SC_FAULT_MEM); }
-static void testVmOp_FailUnderflow_stub_47(void) { testVmOp_FailUnderflow(SC_OP_STORE, 0); }
-static void testVmOp_FailUnderflow_stub_48(void) { testVmOp_FailUnderflow(SC_OP_STORE, 1); }
-static void testVmOpStoreByte_stub_49(void) { testVmOpStoreByte(0, 1, SC_FAULT_OK); }
-static void testVmOpStoreByte_stub_50(void) { testVmOpStoreByte(SC_HEAP_SIZE-1, 1, SC_FAULT_OK); }
-static void testVmOpStoreByte_stub_51(void) { testVmOpStoreByte(0, SC_HEAP_SIZE-1, SC_FAULT_OK); }
-static void testVmOpStoreByte_stub_52(void) { testVmOpStoreByte(0, SC_HEAP_SIZE, SC_FAULT_MEM); }
-static void testVmOp_FailUnderflow_stub_53(void) { testVmOp_FailUnderflow(SC_OP_C_STORE, 0); }
-static void testVmOp_FailUnderflow_stub_54(void) { testVmOp_FailUnderflow(SC_OP_C_STORE, 1); }
-static void testVmOp_FailUnderflow_stub_55(void) { testVmOp_FailUnderflow(SC_OP_EMIT, 0); }
-static void testVmOp_FailOverflow_stub_56(void) { testVmOp_FailOverflow(SC_OP_KEY, 0); }
-static void testVmCall_stub_57(void) { testVmCall(2); }
-static void testVmCall_stub_58(void) { testVmCall(SC_HEAP_SIZE-2); }
+static void testByteLiteral_stub_10(void) { testByteLiteral(0); }
+static void testByteLiteral_stub_11(void) { testByteLiteral(127); }
+static void testByteLiteral_stub_12(void) { testByteLiteral(0xff); }
+static void testVmOpOverrun_stub_13(void) { testVmOpOverrun(SC_OP_LIT8, 1); }
+static void testVmOpOverrun_stub_14(void) { testVmOpOverrun(SC_OP_LIT, sizeof(sc_cell_t)); }
+static void testVmOpOverrun2_stub_15(void) { testVmOpOverrun2(SC_OP_LIT, sizeof(sc_cell_t)); }
+static void testVmUnop_stub_16(void) { testVmUnop(SC_OP_NEGATE, 0x12345678, -0x12345678); }
+static void testVmOp_FailUnderflow_stub_17(void) { testVmOp_FailUnderflow(SC_OP_NEGATE, 0); }
+static void testVmUnop_stub_18(void) { testVmUnop(SC_OP_ZERO_EQUALS, 0, -1); }
+static void testVmUnop_stub_19(void) { testVmUnop(SC_OP_ZERO_EQUALS, -1, 0); }
+static void testVmUnop_stub_20(void) { testVmUnop(SC_OP_ZERO_EQUALS, 12345, 0); }
+static void testVmOp_FailUnderflow_stub_21(void) { testVmOp_FailUnderflow(SC_OP_ZERO_EQUALS, 0); }
+static void testBinop_stub_22(void) { testBinop(SC_OP_MINUS, 0x12345678, -1, 0x12345679); }
+static void testVmOp_FailUnderflow_stub_23(void) { testVmOp_FailUnderflow(SC_OP_MINUS, 1); }
+static void testVmOp_FailUnderflow_stub_24(void) { testVmOp_FailUnderflow(SC_OP_MINUS, 0); }
+static void testBinop_stub_25(void) { testBinop(SC_OP_TIMES, 1234, 5678, 1234*5678); }
+static void testVmOp_FailUnderflow_stub_26(void) { testVmOp_FailUnderflow(SC_OP_TIMES, 1); }
+static void testVmOp_FailUnderflow_stub_27(void) { testVmOp_FailUnderflow(SC_OP_TIMES, 0); }
+static void testSlashMod_stub_28(void) { testSlashMod(38, 5, 38/5, 38%5); }
+static void testVmOp_FailUnderflow_stub_29(void) { testVmOp_FailUnderflow(SC_OP_SLASH_MOD, 1); }
+static void testVmOp_FailUnderflow_stub_30(void) { testVmOp_FailUnderflow(SC_OP_SLASH_MOD, 0); }
+static void testVmOp_FailUnderflow_stub_31(void) { testVmOp_FailUnderflow(SC_OP_DROP, 0); }
+static void testVmOp_FailUnderflow_stub_32(void) { testVmOp_FailUnderflow(SC_OP_DUP, 0); }
+static void testVmOp_FailOverflow_stub_33(void) { testVmOp_FailOverflow(SC_OP_DUP, 0); }
+static void testVmOp_FailUnderflow_stub_34(void) { testVmOp_FailUnderflow(SC_OP_SWAP, 0); }
+static void testVmOp_FailUnderflow_stub_35(void) { testVmOp_FailUnderflow(SC_OP_SWAP, 1); }
+static void testVmOpFetchCell_stub_36(void) { testVmOpFetchCell(0, 1, SC_FAULT_OK); }
+static void testVmOpFetchCell_stub_37(void) { testVmOpFetchCell(SC_HEAP_SIZE-1, 1, SC_FAULT_OK); }
+static void testVmOpFetchCell_stub_38(void) { testVmOpFetchCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t), SC_FAULT_OK); }
+static void testVmOpFetchCell_stub_39(void) { testVmOpFetchCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t)+1, SC_FAULT_MEM); }
+static void testVmOp_FailUnderflow_stub_40(void) { testVmOp_FailUnderflow(SC_OP_FETCH, 0); }
+static void testVmOpFetchByte_stub_41(void) { testVmOpFetchByte(0, 1, SC_FAULT_OK); }
+static void testVmOpFetchByte_stub_42(void) { testVmOpFetchByte(SC_HEAP_SIZE-1, 1, SC_FAULT_OK); }
+static void testVmOpFetchByte_stub_43(void) { testVmOpFetchByte(0, SC_HEAP_SIZE-1, SC_FAULT_OK); }
+static void testVmOpFetchByte_stub_44(void) { testVmOpFetchByte(0, SC_HEAP_SIZE, SC_FAULT_MEM); }
+static void testVmOp_FailUnderflow_stub_45(void) { testVmOp_FailUnderflow(SC_OP_C_FETCH, 0); }
+static void testVmOpStoreCell_stub_46(void) { testVmOpStoreCell(0, 1, SC_FAULT_OK); }
+static void testVmOpStoreCell_stub_47(void) { testVmOpStoreCell(SC_HEAP_SIZE-1, 1, SC_FAULT_OK); }
+static void testVmOpStoreCell_stub_48(void) { testVmOpStoreCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t), SC_FAULT_OK); }
+static void testVmOpStoreCell_stub_49(void) { testVmOpStoreCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t)+1, SC_FAULT_MEM); }
+static void testVmOp_FailUnderflow_stub_50(void) { testVmOp_FailUnderflow(SC_OP_STORE, 0); }
+static void testVmOp_FailUnderflow_stub_51(void) { testVmOp_FailUnderflow(SC_OP_STORE, 1); }
+static void testVmOpStoreByte_stub_52(void) { testVmOpStoreByte(0, 1, SC_FAULT_OK); }
+static void testVmOpStoreByte_stub_53(void) { testVmOpStoreByte(SC_HEAP_SIZE-1, 1, SC_FAULT_OK); }
+static void testVmOpStoreByte_stub_54(void) { testVmOpStoreByte(0, SC_HEAP_SIZE-1, SC_FAULT_OK); }
+static void testVmOpStoreByte_stub_55(void) { testVmOpStoreByte(0, SC_HEAP_SIZE, SC_FAULT_MEM); }
+static void testVmOp_FailUnderflow_stub_56(void) { testVmOp_FailUnderflow(SC_OP_C_STORE, 0); }
+static void testVmOp_FailUnderflow_stub_57(void) { testVmOp_FailUnderflow(SC_OP_C_STORE, 1); }
+static void testVmOp_FailUnderflow_stub_58(void) { testVmOp_FailUnderflow(SC_OP_EMIT, 0); }
+static void testVmOp_FailOverflow_stub_59(void) { testVmOp_FailOverflow(SC_OP_KEY, 0); }
+static void testVmCall_stub_60(void) { testVmCall(2); }
+static void testVmCall_stub_61(void) { testVmCall(SC_HEAP_SIZE-2); }
 
 /*** Extra Unity support. ***/
 
@@ -216,6 +221,8 @@ int main(int argc, char** argv) {
   do_run_test(testHelpersGetc_stub_7, "testHelpersGetc(\"\")", 79);
   do_run_test(testHelpersGetc_stub_8, "testHelpersGetc(\"x\")", 80);
   do_run_test(testHelpersGetc_stub_9, "testHelpersGetc(\"Oh, freddled gruntbuggly, thy micturations are to me...\")", 81);
+  do_run_test(testHelpersHash, "testHelpersHash", 84);
+  do_run_test(testHelpersFindPrimitive, "testHelpersFindPrimitive", 90);
   registerFixture(NULL, NULL, NULL);
   
   UnitySetTestFile("..\test_init.c");
@@ -263,72 +270,74 @@ int main(int argc, char** argv) {
   
   UnitySetTestFile("..\test_vm.c");
   registerFixture(setup_test_vm, dump_test_vm, destroy_test_vm);
-  do_run_test(testscRunNone, "testscRunNone", 60);
-  do_run_test(testBadOpcode, "testBadOpcode", 63);
-  do_run_test(testVmRunFault, "testVmRunFault", 67);
-  do_run_test(testVmRun, "testVmRun", 71);
-  do_run_test(testVmOpFault, "testVmOpFault", 86);
-  do_run_test(testVmOpFaultFail, "testVmOpFaultFail", 91);
-  do_run_test(testVmIpOverrun, "testVmIpOverrun", 96);
-  do_run_test(testByteLiteral, "testByteLiteral", 155);
-  do_run_test(testVmOpOverrun_stub_10, "testVmOpOverrun(SC_OP_LIT8, 1)", 160);
-  do_run_test(testCellLiteral, "testCellLiteral", 163);
-  do_run_test(testVmOpOverrun_stub_11, "testVmOpOverrun(SC_OP_LIT, sizeof(sc_cell_t))", 169);
-  do_run_test(testVmOpOverrun2_stub_12, "testVmOpOverrun2(SC_OP_LIT, sizeof(sc_cell_t))", 170);
-  do_run_test(testVmUnop_stub_13, "testVmUnop(SC_OP_NEGATE, 0x12345678, -0x12345678)", 173);
-  do_run_test(testVmOp_FailUnderflow_stub_14, "testVmOp_FailUnderflow(SC_OP_NEGATE, 0)", 174);
-  do_run_test(testVmUnop_stub_15, "testVmUnop(SC_OP_ZERO_EQUALS, 0, -1)", 177);
-  do_run_test(testVmUnop_stub_16, "testVmUnop(SC_OP_ZERO_EQUALS, -1, 0)", 178);
-  do_run_test(testVmUnop_stub_17, "testVmUnop(SC_OP_ZERO_EQUALS, 12345, 0)", 179);
-  do_run_test(testVmOp_FailUnderflow_stub_18, "testVmOp_FailUnderflow(SC_OP_ZERO_EQUALS, 0)", 180);
-  do_run_test(testBinop_stub_19, "testBinop(SC_OP_MINUS, 0x12345678, -1, 0x12345679)", 183);
-  do_run_test(testVmOp_FailUnderflow_stub_20, "testVmOp_FailUnderflow(SC_OP_MINUS, 1)", 184);
-  do_run_test(testVmOp_FailUnderflow_stub_21, "testVmOp_FailUnderflow(SC_OP_MINUS, 0)", 185);
-  do_run_test(testBinop_stub_22, "testBinop(SC_OP_TIMES, 1234, 5678, 1234*5678)", 188);
-  do_run_test(testVmOp_FailUnderflow_stub_23, "testVmOp_FailUnderflow(SC_OP_TIMES, 1)", 189);
-  do_run_test(testVmOp_FailUnderflow_stub_24, "testVmOp_FailUnderflow(SC_OP_TIMES, 0)", 190);
-  do_run_test(testSlashMod_stub_25, "testSlashMod(38, 5, 38/5, 38%5)", 201);
-  do_run_test(testVmOp_FailUnderflow_stub_26, "testVmOp_FailUnderflow(SC_OP_SLASH_MOD, 1)", 202);
-  do_run_test(testVmOp_FailUnderflow_stub_27, "testVmOp_FailUnderflow(SC_OP_SLASH_MOD, 0)", 203);
-  do_run_test(testVmOpDrop, "testVmOpDrop", 206);
-  do_run_test(testVmOp_FailUnderflow_stub_28, "testVmOp_FailUnderflow(SC_OP_DROP, 0)", 212);
-  do_run_test(testVmOpDup, "testVmOpDup", 214);
-  do_run_test(testVmOp_FailUnderflow_stub_29, "testVmOp_FailUnderflow(SC_OP_DUP, 0)", 220);
-  do_run_test(testVmOp_FailOverflow_stub_30, "testVmOp_FailOverflow(SC_OP_DUP, 0)", 221);
-  do_run_test(testVmOpSwap, "testVmOpSwap", 223);
-  do_run_test(testVmOp_FailUnderflow_stub_31, "testVmOp_FailUnderflow(SC_OP_SWAP, 0)", 230);
-  do_run_test(testVmOp_FailUnderflow_stub_32, "testVmOp_FailUnderflow(SC_OP_SWAP, 1)", 231);
-  do_run_test(testVmOpFetchCell_stub_33, "testVmOpFetchCell(0, 1, SC_FAULT_OK)", 246);
-  do_run_test(testVmOpFetchCell_stub_34, "testVmOpFetchCell(SC_HEAP_SIZE-1, 1, SC_FAULT_OK)", 247);
-  do_run_test(testVmOpFetchCell_stub_35, "testVmOpFetchCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t), SC_FAULT_OK)", 248);
-  do_run_test(testVmOpFetchCell_stub_36, "testVmOpFetchCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t)+1, SC_FAULT_MEM)", 249);
-  do_run_test(testVmOp_FailUnderflow_stub_37, "testVmOp_FailUnderflow(SC_OP_FETCH, 0)", 250);
-  do_run_test(testVmOpFetchByte_stub_38, "testVmOpFetchByte(0, 1, SC_FAULT_OK)", 265);
-  do_run_test(testVmOpFetchByte_stub_39, "testVmOpFetchByte(SC_HEAP_SIZE-1, 1, SC_FAULT_OK)", 266);
-  do_run_test(testVmOpFetchByte_stub_40, "testVmOpFetchByte(0, SC_HEAP_SIZE-1, SC_FAULT_OK)", 267);
-  do_run_test(testVmOpFetchByte_stub_41, "testVmOpFetchByte(0, SC_HEAP_SIZE, SC_FAULT_MEM)", 268);
-  do_run_test(testVmOp_FailUnderflow_stub_42, "testVmOp_FailUnderflow(SC_OP_C_FETCH, 0)", 269);
-  do_run_test(testVmOpStoreCell_stub_43, "testVmOpStoreCell(0, 1, SC_FAULT_OK)", 281);
-  do_run_test(testVmOpStoreCell_stub_44, "testVmOpStoreCell(SC_HEAP_SIZE-1, 1, SC_FAULT_OK)", 282);
-  do_run_test(testVmOpStoreCell_stub_45, "testVmOpStoreCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t), SC_FAULT_OK)", 283);
-  do_run_test(testVmOpStoreCell_stub_46, "testVmOpStoreCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t)+1, SC_FAULT_MEM)", 284);
-  do_run_test(testVmOp_FailUnderflow_stub_47, "testVmOp_FailUnderflow(SC_OP_STORE, 0)", 285);
-  do_run_test(testVmOp_FailUnderflow_stub_48, "testVmOp_FailUnderflow(SC_OP_STORE, 1)", 286);
-  do_run_test(testVmOpStoreByte_stub_49, "testVmOpStoreByte(0, 1, SC_FAULT_OK)", 298);
-  do_run_test(testVmOpStoreByte_stub_50, "testVmOpStoreByte(SC_HEAP_SIZE-1, 1, SC_FAULT_OK)", 299);
-  do_run_test(testVmOpStoreByte_stub_51, "testVmOpStoreByte(0, SC_HEAP_SIZE-1, SC_FAULT_OK)", 300);
-  do_run_test(testVmOpStoreByte_stub_52, "testVmOpStoreByte(0, SC_HEAP_SIZE, SC_FAULT_MEM)", 301);
-  do_run_test(testVmOp_FailUnderflow_stub_53, "testVmOp_FailUnderflow(SC_OP_C_STORE, 0)", 302);
-  do_run_test(testVmOp_FailUnderflow_stub_54, "testVmOp_FailUnderflow(SC_OP_C_STORE, 1)", 303);
-  do_run_test(testVmOpClear, "testVmOpClear", 306);
-  do_run_test(testVmEmit, "testVmEmit", 314);
-  do_run_test(testVmOp_FailUnderflow_stub_55, "testVmOp_FailUnderflow(SC_OP_EMIT, 0)", 321);
-  do_run_test(testVmOp_FailOverflow_stub_56, "testVmOp_FailOverflow(SC_OP_KEY, 0)", 330);
-  do_run_test(testVmCall_stub_57, "testVmCall(2)", 346);
-  do_run_test(testVmCall_stub_58, "testVmCall(SC_HEAP_SIZE-2)", 347);
-  do_run_test(testVmCallBadReturn, "testVmCallBadReturn", 348);
-  do_run_test(testVmCallBadAddress, "testVmCallBadAddress", 358);
-  do_run_test(testVmCallIpOverrun, "testVmCallIpOverrun", 363);
+  do_run_test(testscRunNone, "testscRunNone", 59);
+  do_run_test(testBadOpcode, "testBadOpcode", 62);
+  do_run_test(testVmRunFault, "testVmRunFault", 66);
+  do_run_test(testVmRun, "testVmRun", 70);
+  do_run_test(testVmOpFault, "testVmOpFault", 85);
+  do_run_test(testVmOpFaultFail, "testVmOpFaultFail", 90);
+  do_run_test(testVmIpOverrun, "testVmIpOverrun", 95);
+  do_run_test(testByteLiteral_stub_10, "testByteLiteral(0)", 159);
+  do_run_test(testByteLiteral_stub_11, "testByteLiteral(127)", 160);
+  do_run_test(testByteLiteral_stub_12, "testByteLiteral(0xff)", 161);
+  do_run_test(testVmOpOverrun_stub_13, "testVmOpOverrun(SC_OP_LIT8, 1)", 162);
+  do_run_test(testCellLiteral, "testCellLiteral", 165);
+  do_run_test(testVmOpOverrun_stub_14, "testVmOpOverrun(SC_OP_LIT, sizeof(sc_cell_t))", 171);
+  do_run_test(testVmOpOverrun2_stub_15, "testVmOpOverrun2(SC_OP_LIT, sizeof(sc_cell_t))", 172);
+  do_run_test(testVmUnop_stub_16, "testVmUnop(SC_OP_NEGATE, 0x12345678, -0x12345678)", 175);
+  do_run_test(testVmOp_FailUnderflow_stub_17, "testVmOp_FailUnderflow(SC_OP_NEGATE, 0)", 176);
+  do_run_test(testVmUnop_stub_18, "testVmUnop(SC_OP_ZERO_EQUALS, 0, -1)", 179);
+  do_run_test(testVmUnop_stub_19, "testVmUnop(SC_OP_ZERO_EQUALS, -1, 0)", 180);
+  do_run_test(testVmUnop_stub_20, "testVmUnop(SC_OP_ZERO_EQUALS, 12345, 0)", 181);
+  do_run_test(testVmOp_FailUnderflow_stub_21, "testVmOp_FailUnderflow(SC_OP_ZERO_EQUALS, 0)", 182);
+  do_run_test(testBinop_stub_22, "testBinop(SC_OP_MINUS, 0x12345678, -1, 0x12345679)", 185);
+  do_run_test(testVmOp_FailUnderflow_stub_23, "testVmOp_FailUnderflow(SC_OP_MINUS, 1)", 186);
+  do_run_test(testVmOp_FailUnderflow_stub_24, "testVmOp_FailUnderflow(SC_OP_MINUS, 0)", 187);
+  do_run_test(testBinop_stub_25, "testBinop(SC_OP_TIMES, 1234, 5678, 1234*5678)", 190);
+  do_run_test(testVmOp_FailUnderflow_stub_26, "testVmOp_FailUnderflow(SC_OP_TIMES, 1)", 191);
+  do_run_test(testVmOp_FailUnderflow_stub_27, "testVmOp_FailUnderflow(SC_OP_TIMES, 0)", 192);
+  do_run_test(testSlashMod_stub_28, "testSlashMod(38, 5, 38/5, 38%5)", 203);
+  do_run_test(testVmOp_FailUnderflow_stub_29, "testVmOp_FailUnderflow(SC_OP_SLASH_MOD, 1)", 204);
+  do_run_test(testVmOp_FailUnderflow_stub_30, "testVmOp_FailUnderflow(SC_OP_SLASH_MOD, 0)", 205);
+  do_run_test(testVmOpDrop, "testVmOpDrop", 208);
+  do_run_test(testVmOp_FailUnderflow_stub_31, "testVmOp_FailUnderflow(SC_OP_DROP, 0)", 214);
+  do_run_test(testVmOpDup, "testVmOpDup", 216);
+  do_run_test(testVmOp_FailUnderflow_stub_32, "testVmOp_FailUnderflow(SC_OP_DUP, 0)", 222);
+  do_run_test(testVmOp_FailOverflow_stub_33, "testVmOp_FailOverflow(SC_OP_DUP, 0)", 223);
+  do_run_test(testVmOpSwap, "testVmOpSwap", 225);
+  do_run_test(testVmOp_FailUnderflow_stub_34, "testVmOp_FailUnderflow(SC_OP_SWAP, 0)", 232);
+  do_run_test(testVmOp_FailUnderflow_stub_35, "testVmOp_FailUnderflow(SC_OP_SWAP, 1)", 233);
+  do_run_test(testVmOpFetchCell_stub_36, "testVmOpFetchCell(0, 1, SC_FAULT_OK)", 250);
+  do_run_test(testVmOpFetchCell_stub_37, "testVmOpFetchCell(SC_HEAP_SIZE-1, 1, SC_FAULT_OK)", 251);
+  do_run_test(testVmOpFetchCell_stub_38, "testVmOpFetchCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t), SC_FAULT_OK)", 252);
+  do_run_test(testVmOpFetchCell_stub_39, "testVmOpFetchCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t)+1, SC_FAULT_MEM)", 253);
+  do_run_test(testVmOp_FailUnderflow_stub_40, "testVmOp_FailUnderflow(SC_OP_FETCH, 0)", 254);
+  do_run_test(testVmOpFetchByte_stub_41, "testVmOpFetchByte(0, 1, SC_FAULT_OK)", 271);
+  do_run_test(testVmOpFetchByte_stub_42, "testVmOpFetchByte(SC_HEAP_SIZE-1, 1, SC_FAULT_OK)", 272);
+  do_run_test(testVmOpFetchByte_stub_43, "testVmOpFetchByte(0, SC_HEAP_SIZE-1, SC_FAULT_OK)", 273);
+  do_run_test(testVmOpFetchByte_stub_44, "testVmOpFetchByte(0, SC_HEAP_SIZE, SC_FAULT_MEM)", 274);
+  do_run_test(testVmOp_FailUnderflow_stub_45, "testVmOp_FailUnderflow(SC_OP_C_FETCH, 0)", 275);
+  do_run_test(testVmOpStoreCell_stub_46, "testVmOpStoreCell(0, 1, SC_FAULT_OK)", 288);
+  do_run_test(testVmOpStoreCell_stub_47, "testVmOpStoreCell(SC_HEAP_SIZE-1, 1, SC_FAULT_OK)", 289);
+  do_run_test(testVmOpStoreCell_stub_48, "testVmOpStoreCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t), SC_FAULT_OK)", 290);
+  do_run_test(testVmOpStoreCell_stub_49, "testVmOpStoreCell(0, SC_HEAP_SIZE-sizeof(sc_cell_t)+1, SC_FAULT_MEM)", 291);
+  do_run_test(testVmOp_FailUnderflow_stub_50, "testVmOp_FailUnderflow(SC_OP_STORE, 0)", 292);
+  do_run_test(testVmOp_FailUnderflow_stub_51, "testVmOp_FailUnderflow(SC_OP_STORE, 1)", 293);
+  do_run_test(testVmOpStoreByte_stub_52, "testVmOpStoreByte(0, 1, SC_FAULT_OK)", 306);
+  do_run_test(testVmOpStoreByte_stub_53, "testVmOpStoreByte(SC_HEAP_SIZE-1, 1, SC_FAULT_OK)", 307);
+  do_run_test(testVmOpStoreByte_stub_54, "testVmOpStoreByte(0, SC_HEAP_SIZE-1, SC_FAULT_OK)", 308);
+  do_run_test(testVmOpStoreByte_stub_55, "testVmOpStoreByte(0, SC_HEAP_SIZE, SC_FAULT_MEM)", 309);
+  do_run_test(testVmOp_FailUnderflow_stub_56, "testVmOp_FailUnderflow(SC_OP_C_STORE, 0)", 310);
+  do_run_test(testVmOp_FailUnderflow_stub_57, "testVmOp_FailUnderflow(SC_OP_C_STORE, 1)", 311);
+  do_run_test(testVmOpClear, "testVmOpClear", 314);
+  do_run_test(testVmEmit, "testVmEmit", 322);
+  do_run_test(testVmOp_FailUnderflow_stub_58, "testVmOp_FailUnderflow(SC_OP_EMIT, 0)", 329);
+  do_run_test(testVmOp_FailOverflow_stub_59, "testVmOp_FailOverflow(SC_OP_KEY, 0)", 338);
+  do_run_test(testVmCall_stub_60, "testVmCall(2)", 355);
+  do_run_test(testVmCall_stub_61, "testVmCall(SC_HEAP_SIZE-2)", 356);
+  do_run_test(testVmCallBadReturn, "testVmCallBadReturn", 357);
+  do_run_test(testVmCallBadAddress, "testVmCallBadAddress", 368);
+  do_run_test(testVmCallIpOverrun, "testVmCallIpOverrun", 373);
   registerFixture(NULL, NULL, NULL);
 
   return UnityEnd();

@@ -17,18 +17,47 @@ enum {
 typedef struct ScContext ScContext;
 void scInitContext(ScContext* ctx);
 void scInit(ScContext* ctx);
+
+// Run AT MOST n instructions in the VM. Return value will be one of the SC_FAULT_xxx values.
 uint8_t scRun(int n);
 
-// Read/write byte on heap. Will set memory fault if out of bounds. 
-void scHeapWriteByte(sc_cell_t offs, uint8_t v);
-uint8_t scHeapReadByte(sc_cell_t offs);
-
-// Read/write Sconsole cell on heap. Will set memory fault if out of bounds. 
-void scHeapWriteCell(sc_cell_t offs, sc_cell_t v);
-sc_cell_t scHeapReadCell(sc_cell_t offs);
+/* Function to print on the output stream. You must supply this. Unknown options are ignored and cause no output.
+	. 	CONSOLE_PRINT_SIGNED
+	$. 	CONSOLE_PRINT_HEX
+	x.	CONSOLE_PRINT_HEX | CONSOLE_PRINT_FILL_ZERO | $0200 
+#define CONSOLE_OUTPUT_NEWLINE_STR "\r\n"
+enum {
+	CONSOLE_PRINT_NEWLINE = 0,			// Prints just the newline string.
+	CONSOLE_PRINT_SIGNED = 1,			// Print a signed integer, e.g `-123 ', `0 ', `456 '.
+	CONSOLE_PRINT_UNSIGNED = 2,			// Print an unsigned integer, e.g `+0 ', `+123 '.
+	CONSOLE_PRINT_HEX = 3,				// Print a hex integer, e.g `$0000 ', `$abcd '.
+	CONSOLE_PRINT_STR = 4,				// Print string from address.
+	CONSOLE_PRINT_CHAR = 5,				// Print char.
+	CONSOLE_PRINT_SIGNED_DOUBLE = 6,	// Print a signed DOUBLE integer, e.g `-123 ', `0 ', `456 '.
+	CONSOLE_PRINT_UNSIGNED_DOUBLE = 7,	// Print an unsigned DOUBLE integer, e.g `+0 ', `+123 '.
+	CONSOLE_PRINT_HEX_DOUBLE = 8,		// Print a hex DOUBLE integer, e.g `$0000 ', `$abcd '.
+	CONSOLE_PRINT_NO_LEADER = 0x10,		// AND with option to _NOT_ print leading `+' or `$.
+	CONSOLE_PRINT_RIGHT_JUST = 0x20,	// AND with option to justify to right
+	CONSOLE_PRINT_FILL_ZERO = 0x40,		// AND with option to left fill with zeroes.
+	CONSOLE_PRINT_WIDTH = 0xff00,		// Upper byte contains field width. Zero implies default width, zero fill, trailing space.
+};
+void consolePrint(uint8_t opt, console_cell_t x);
+*/
 
 // Used to include internal stuff for implementation and testing, not for normal usage.
 #ifdef SCONSOLE_WANT_INTERNAL_DEFS
+
+// Read/write byte/cell on heap. Will set memory fault if out of bounds. 
+void scHeapWriteByte(sc_cell_t offs, uint8_t v);
+uint8_t scHeapReadByte(sc_cell_t offs);
+void scHeapWriteCell(sc_cell_t offs, sc_cell_t v);
+sc_cell_t scHeapReadCell(sc_cell_t offs);
+
+// Lookup a primitive from the hash of it's word, so "DUP" -> SC_OP_DUP. Returns -1 if not found. 
+uint8_t sc_find_primitive_op(uint16_t h);
+
+// Return a hash value for the string, used to lookup words.
+uint16_t sc_hash(const char* s);
 
 #include "sconsole.auto.h"
 

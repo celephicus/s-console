@@ -11,22 +11,25 @@ void tsSetGetc(const char* s);
 char* tsGetPutc();
 
 // Assembler for the heap.
+extern uint16_t g_ts_assembler_loc;
+#define TS_ASSEMBLER_LOC (g_ts_assembler_loc)
+
 // Write some 8 bit values at address pointed to by first arg.
-#define TS_ASSEMBLER_CODE(addr_, ...)	do {				\
+#define TS_ASSEMBLER_CODE(...)	do {				\
 	uint8_t x[] = { __VA_ARGS__ };							\
-	memcpy(&HEAP[*(addr_)], x, sizeof(x));					\
-	*(addr_) += sizeof(x);									\
+	memcpy(&HEAP[g_ts_assembler_loc], x, sizeof(x));					\
+	g_ts_assembler_loc += sizeof(x);									\
 } while (0)
 
 // Write a single cell at address pointed to by first arg.
-#define TS_ASSEMBLER_CELL(addr_, v_)	do {				\
-	*(sc_cell_t*)&HEAP[*(addr_)] = (v_);					\
-	*(addr_) += sizeof(sc_cell_t);							\
+#define TS_ASSEMBLER_CELL(v_)	do {				\
+	*(sc_cell_t*)&HEAP[g_ts_assembler_loc] = (v_);					\
+	g_ts_assembler_loc += sizeof(sc_cell_t);							\
 } while (0)
 	
 // Assemble a CALL to the given 16 bit address.
-#define TS_ASSEMBLER_CALL(addr_, call_)						\
-	TS_ASSEMBLER_CODE(addr_, ((uint8_t)((call_) >> 8)) | 0x80, (uint8_t)(call_))
+#define TS_ASSEMBLER_CALL(call_)						\
+	TS_ASSEMBLER_CODE(((uint8_t)((call_) >> 8)) | 0x80, (uint8_t)(call_))
 
 #endif 		// T_SUPPORT_H_
 

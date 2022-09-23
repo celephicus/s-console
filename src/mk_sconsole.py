@@ -1,73 +1,148 @@
-import re, sys, sys, os
+import re, sys, sys, os, struct
 
-I_WORD, I_NAME, I_OPTIONS, I_OPCODE, I_CODE = range(5)
-primops = []
+P_NAME, P_OPTIONS, P_OPCODE, P_CODE = range(4)
+primops = {}
+W_NAME, W_OPTIONS, W_OPCODE, W_CODE = range(4)
+words = {}
 
-# Parse out primitive definitions.	
+def to_number(s):
+	return int(s)
+def to_bytes(n):
+	return list(struct.unpack('bb', struct.pack('>h', n)))
+
+def assemble(ws):	
+	p_code = []		# First assemble to a pseudocode that can be optimised.
+	for w in ws.split():
+		try:	# Literal number?
+			n = to_number(w)
+			p_code.append(n)
+		except ValueError:
+			if w in primops:	# Primitive?
+				p_code.append(primops[w][P_OPCODE])
+			elif w in words:	# Must be a word.
+				w_code = words[w][W_CODE]
+				if len(w_code) < 1:		# Inline or call?
+					p_code += w_code
+				else:
+					p_code.append(words[w][W_OPCODE])
+			else:
+				sys.exit(f"Unknown word {w}.")
+	#print(p_code)
+	code = []
+	for ins in p_code:
+		if isinstance(ins, int):	# Literal
+			if -128 <= ins < 128:
+				code += ['SC_OP_LIT8', str(ins)]
+			else:
+				code += ['SC_OP_LIT'] + to_bytes(ins)
+		elif ins.startswith('SC_WORD'):	# Call word
+			code += [f'{ins}>>8', f'{ins}&0xff']
+		else:
+			code.append(ins)
+			
+	code.append('SC_OP_RET')
+	return code
+	
+# Parse out definitions. Convert to logical lines by appending lines that start with whitespace onto whatever has been read so far until
+#  a line is read with non whitepace in first column. 
 text = open(sys.argv[1], 'rt').read()
 # PRIMOP 	LIT8	'( - c)' "Pushes next byte in instruction stream." [hide] { c = CHECK_ERR(memget_char_ip()) console_u_push(c); }
+
+lln = []	# Logical line accumulator. 
+def process():
+	global done, lln
+	lln = ' '.join(lln)
+	if lln:
+		#print(repr(lln)) 
+		if lln.startswith('IGNORE'):
+			return False
+		m = re.match(r'''
+		  (?P<def>PRIMOP|WORD)\s*
+		  (?P<word>[^\s]+)\s*		
+		  '(?P<stack_effect>.*)'\s+		
+		  "(?P<description>.*)"\s*	
+		  \[(?P<options>[^]]*)\]\s*	
+		  (?P<code>.*)\s*			
+		  $		
+		  ''', lln, re.X)
+		#print(m.groupdict())
+		if m:
+			c_name = m.group('word').lower()
+			options = m.group('options').split()
+			for opt in options:
+				if m_opt := re.match(r'n=(.*)$', opt):
+					c_name = m_opt.group(1)
+			if m.group('def') == 'PRIMOP':
+				opcode = 'SC_OP_' + c_name.upper()
+				code_snippet = [m.group('code').strip()]
+				if not code_snippet[0].endswith(';'):
+					code_snippet.append(';')
+				code_snippet.append(' goto next;')
+				primops[m.group('word')] = (c_name, options, opcode, "".join(code_snippet))
+			else:
+				opcode = 'SC_WORD_' + c_name.upper()
+				words[m.group('word')] = (c_name, options, opcode, assemble(m.group('code')))
+		else:
+			print(f"Line `{lln}' not understood.", file=sys.stderr)
+			sys.exit()
+	return True
+
 for ln in text.splitlines():
-	ln = ln.lstrip()
-	if not ln:
+	if not ln or ln.isspace():			# Blank physical lines are just ignored.
 		continue
-	if ln.startswith('#'):
+	if ln.lstrip().startswith('#'):		# Physical lines starting with a `#' are ignored. 
 		continue
-	if ln.startswith('IGNORE'):
-		break
-	if m := re.match(r'''
-	  PRIMOP\s*
-	  ([^\s]+)\s*		# Word. 
-	  '(.*)'\s+			# Stack effect,
-	  "(.*)"\s*			# Description.
-	  \[([^]]*)\]\s*	# Options.
-	  \{(.*)\}\s*		# Code.
-	  $					# 
-	  ''', ln, re.X):
-		word_name = m.group(1)
-		c_name = word_name.lower()
-		options = m.group(4).split()
-		for opt in options:
-			if m_opt := re.match(r'n=(.*)$', opt):
-				c_name = m_opt.group(1)
-		opcode = 'SC_OP_' + c_name.upper()
-		code_snippet = [m.group(5).strip()]
-		if not code_snippet[0].endswith(';'):
-			code_snippet.append(';')
-		code_snippet.append(' goto next;')
-		code_snippet = "".join(code_snippet)
-		primops.append((word_name, c_name, options, opcode, code_snippet, ))
+	if ln[0].isspace():					# Continution line...
+		if not lln:
+			sys.exit("Continuation with no start.")
+		lln.append(ln.lstrip())
 	else:
-		print(f"Line `{ln}' not understood.", file=sys.stderr)
-		sys.exit()
+		if not process():
+			lln = []
+			break;
+		lln = [ln]
+process()
+			
 
 # Dump info	
-print(' '.join([p[I_WORD] for p in primops]))
-
+print('Primitives:', ' '.join(primops.keys()))
+print('Words:', ' '.join(words.keys()))
+'''
+for w in words.items():
+	print(w)
+'''
+	
 # Generate definitions.
-sc_opcodes = '\n'.join([f'\t{p[I_OPCODE]},  \\' for p in primops])
-sc_snippets = '\n'.join([f'\t{p[I_NAME]}: {p[I_CODE]} \\' for p in primops])
-sc_jumps = ', '.join([f'&&{p[I_NAME]}' for p in primops])
+sc_opcodes = '\n'.join([f'\t{p[P_OPCODE]},  \\' for p in primops.values()])
+sc_snippets = '\n'.join([f'\t{p[P_NAME]}: {p[P_CODE]} \\' for p in primops.values()])
+sc_jumps = ', '.join([f'&&{p[P_NAME]}' for p in primops.values()])
 
-def hash(w):
+def sc_hash(w):
 	HASH_START, HASH_MULT = 5381, 33 # No basis for these numbers, they just seem to work.
 	h = HASH_START;
 	for c in w.upper():
 		h = ((h * HASH_MULT) & 0xffff) ^ ord(c)
 	return h
-	
-sc_dict = []
-prev = 0xffff
-for p in primops:
-	if 'hide' not in p[I_OPTIONS]:
-		entry = [prev&0xff, prev>>8]
-		h = hash(p[I_WORD])
-		entry += [h&0xff, h>>8]
-		entry += [0]		# Flags
-		entry += [p[I_OPCODE], 'SC_OP_RET']
-		prev = len(sc_dict)
-		sc_dict += entry
-		#print(prev, entry)
-		
+
+# Build word dict.
+DICT_HEADER = '>BHB'	# Offset to previous, hash, options.
+prev = 0xff
+w_dict = []	# List of bytes for const dict in target memory.
+w_defs = [] # List of strings of form `SC_WORD_FOO = 1234,'.
+for w in words:
+	options = 0 # words[w][W_OPTIONS])
+	dict_entry = [int(x) for x in struct.pack(DICT_HEADER, prev, sc_hash(w), options)] + words[w][W_CODE]
+	prev = len(dict_entry)
+	w_defs.append('\tSC_WORD_{} = {},'.format(words[w][W_NAME].upper(), len(w_dict) + struct.calcsize(DICT_HEADER)))
+	w_dict += dict_entry
+wdefs = '\n'.join(w_defs)
+
+# Build sorted list hashes for binary sort.
+primaries = [(sc_hash(p[0]), p[1][P_OPCODE]) for p in primops.items()]
+primaries.sort(key=lambda x: x[0])
+primaries = [f'    {{ {x[0]}, {x[1]} }}, \\' for x in primaries]
+primaries = '\n'.join(primaries)
+
 f = open(os.path.join(os.path.dirname(sys.argv[1]), 'sconsole.auto.h'), 'wt')
 f.write(f'''\
 // This file is autogenerated, do not edit.
@@ -81,4 +156,10 @@ f.write(f'''\
 #define SC_SNIPPETS \\
 {sc_snippets}
 
+#define SC_CONST_DICT \\
+{primaries}
+
+enum {{
+{wdefs}
+}};
 ''')

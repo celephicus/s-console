@@ -10,10 +10,9 @@
 #include "sconsole.h"
 
 #include "t_support.h"
-static sc_cell_t addr;
 void setup_test_vm() {
 	ts_SetupStackTestContext();
-	addr = 0;
+	TS_ASSEMBLER_LOC = 0;
 }
 void destroy_test_vm() {
 	TEST_ASSERT_EQUAL_MESSAGE(0, u_depth(), "u_depth");
@@ -62,7 +61,7 @@ void testscRunNone() {
 	TEST_ASSERT_RUN(0, SC_FAULT_OK, 0);
 }
 void testBadOpcode() {
-	TS_ASSEMBLER_CODE(&addr, 0x7f); 
+	TS_ASSEMBLER_CODE(0x7f); 
 	TEST_ASSERT_RUN(1, SC_FAULT_BAD_OPCODE, 1);
 }
 void testVmRunFault() { // VM does not run if fault set. 
@@ -72,8 +71,8 @@ void testVmRunFault() { // VM does not run if fault set.
 void testVmRun() {
 	enum { N = 7 };
 	for (uint8_t i = 0; i < N; i++)
-		TS_ASSEMBLER_CODE(&addr, SC_OP_LIT8, i); 
-	TS_ASSEMBLER_CODE(&addr, SC_OP_LIT8, 99, SC_OP_FAULT); 
+		TS_ASSEMBLER_CODE(SC_OP_LIT8, i); 
+	TS_ASSEMBLER_CODE(SC_OP_LIT8, 99, SC_OP_FAULT); 
 
 	TEST_ASSERT_RUN(2, SC_FAULT_OK, 4);
 	TEST_ASSERT_EQUAL(2, u_depth());
@@ -85,18 +84,18 @@ void testVmRun() {
 
 // Check FAULT opcode.
 void testVmOpFault() {	
-	TS_ASSEMBLER_CODE(&addr, SC_OP_FAULT); 
+	TS_ASSEMBLER_CODE(SC_OP_FAULT); 
 	u_push(113);
 	TEST_ASSERT_RUN(1, 113, 1);
 }
 void testVmOpFaultFail() {	// Check stack underflow on FAULT opcode.
-	TS_ASSEMBLER_CODE(&addr, SC_OP_FAULT); 
+	TS_ASSEMBLER_CODE(SC_OP_FAULT); 
 	TEST_ASSERT_RUN(1, SC_FAULT_U_STACK_UFLOW, 1);
 }
 
 void testVmIpOverrun() {	// Verify fault on IP going out of range. 
-	addr = SC_HEAP_SIZE-1;
-	TS_ASSEMBLER_CODE(&addr, SC_OP_SWAP);
+	TS_ASSEMBLER_LOC = SC_HEAP_SIZE-1;
+	TS_ASSEMBLER_CODE(SC_OP_SWAP);
 	IP = SC_HEAP_SIZE-1;
 	u_push(1234);
 	u_push(5678);
@@ -107,63 +106,66 @@ void testVmIpOverrun() {	// Verify fault on IP going out of range.
 }
 
 void testVmOpOverrun(uint8_t op, uint8_t sz) {	// Load FIRST byte from IP outside memory.
-	addr = SC_HEAP_SIZE-1;
-	TS_ASSEMBLER_CODE(&addr, op);
+	TS_ASSEMBLER_LOC = SC_HEAP_SIZE-1;
+	TS_ASSEMBLER_CODE(op);
 	IP = SC_HEAP_SIZE-1;
 	TEST_ASSERT_RUN(1, SC_FAULT_BAD_IP, SC_HEAP_SIZE+sz);	
 }
 	
 void testVmOpOverrun2(uint8_t op, uint8_t sz) {	// Load SECOND byte from IP outside memory.
-	addr = SC_HEAP_SIZE-2;
-	TS_ASSEMBLER_CODE(&addr, op, 0);
+	TS_ASSEMBLER_LOC = SC_HEAP_SIZE-2;
+	TS_ASSEMBLER_CODE(op, 0);
 	IP = SC_HEAP_SIZE-2;
 	TEST_ASSERT_RUN(1, SC_FAULT_BAD_IP, SC_HEAP_SIZE-1+sz);	
 }
 	
 // Helpers for unary ops.
 void testVmUnop(uint8_t op, sc_cell_t a, sc_cell_t r) { // Verify unary op result.
-	TS_ASSEMBLER_CODE(&addr, op);
+	TS_ASSEMBLER_CODE(op);
 	u_push(a);
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1);
 	verify_stack(1, r);
 }
 void testBinop(uint8_t op, sc_cell_t a1, sc_cell_t a2, sc_cell_t r) {  // Verify binary op result.
-	TS_ASSEMBLER_CODE(&addr, op);
+	TS_ASSEMBLER_CODE(op);
 	u_push(a1);
 	u_push(a2);
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1);
 	verify_stack(1, r);
 }
 void testVmOp_FailUnderflow(uint8_t op, int n_args) { // Verify operator sets fault on underflow with N items on stack
-	TS_ASSEMBLER_CODE(&addr, op);
+	TS_ASSEMBLER_CODE(op);
 	while (n_args-- > 0) u_push(1234);
 	TEST_ASSERT_RUN(1, SC_FAULT_U_STACK_UFLOW, 1);
 	u_clear();
 }
 
 void testVmOp_FailOverflow(uint8_t op, int n_free) { // Verify operator sets fault on underflow with N _FREE_ items on stack
-	TS_ASSEMBLER_CODE(&addr, op);
+	TS_ASSEMBLER_CODE(op);
 	while (u_free() > n_free)
 		u_push(1234);
 	TEST_ASSERT_RUN(1, SC_FAULT_U_STACK_OFLOW, 1);
 	u_clear();
 }
 
-// Word tests!
+// Primitive tests!
 //
 
 // LIT8 -- byte literal.
-void testByteLiteral() {
-	TS_ASSEMBLER_CODE(&addr, SC_OP_LIT8, 122);
+void testByteLiteral(uint8_t val) {
+	TS_ASSEMBLER_CODE(SC_OP_LIT8, val);
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 2);
-	verify_stack(1, 122);
+	verify_stack(1, (sc_cell_t)val);
 }
+TT_TEST_CASE(testByteLiteral(0));
+TT_TEST_CASE(testByteLiteral(127));
+TT_TEST_CASE(testByteLiteral(0xff));
 TT_TEST_CASE(testVmOpOverrun(SC_OP_LIT8, 1));
 
 // LIT -- cell literal. 
 void testCellLiteral() {
-	TS_ASSEMBLER_CODE(&addr, SC_OP_LIT);
-	TS_ASSEMBLER_CELL(&addr, 0x12345678);
+	TS_ASSEMBLER_CODE(SC_OP_LIT);
+	TS_ASSEMBLER_CELL(0x12345678);
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1+sizeof(sc_cell_t));
 	verify_stack(1, 0x12345678);
 }
@@ -193,7 +195,7 @@ TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_TIMES, 0));
 // /MOD -- get quotient & remainder.
 // TODO: check the rounding of the quotient & remainder. If you compile on a pre C99 compiler then the division rounding is weird. 
 void testSlashMod(sc_cell_t a1, sc_cell_t a2, sc_cell_t q, sc_cell_t r) {
-	TS_ASSEMBLER_CODE(&addr, SC_OP_SLASH_MOD);
+	TS_ASSEMBLER_CODE(SC_OP_SLASH_MOD);
 	u_push(a1);
 	u_push(a2);
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1);
@@ -205,7 +207,7 @@ TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_SLASH_MOD, 0));
 
 // Stack operators.
 void testVmOpDrop() {	// DROP
-	TS_ASSEMBLER_CODE(&addr, SC_OP_DROP);
+	TS_ASSEMBLER_CODE(SC_OP_DROP);
 	u_push(1234);
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1);
 	TEST_ASSERT_EQUAL(0, u_depth());
@@ -213,7 +215,7 @@ void testVmOpDrop() {	// DROP
 TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_DROP, 0));
 
 void testVmOpDup() { 	// DUP
-	TS_ASSEMBLER_CODE(&addr, SC_OP_DUP);
+	TS_ASSEMBLER_CODE(SC_OP_DUP);
 	u_push(1234);
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1);
 	verify_stack(2, 1234, 1234);
@@ -222,7 +224,7 @@ TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_DUP, 0));
 TT_TEST_CASE(testVmOp_FailOverflow(SC_OP_DUP, 0));
 
 void testVmOpSwap() { 	// SWAP
-	TS_ASSEMBLER_CODE(&addr, SC_OP_SWAP);
+	TS_ASSEMBLER_CODE(SC_OP_SWAP);
 	u_push(1234);
 	u_push(5678);
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1);
@@ -233,12 +235,14 @@ TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_SWAP, 1));
 
 // @ -- Fetch CELL from address. 
 void testVmOpFetchCell(uint16_t op_addr, uint16_t val_addr, uint8_t fault) {
-	addr = op_addr; TS_ASSEMBLER_CODE(&addr, SC_OP_FETCH); IP = op_addr;
+	IP = TS_ASSEMBLER_LOC = op_addr; 
+	TS_ASSEMBLER_CODE(SC_OP_FETCH); 
 	if (!fault) {
-		addr = val_addr; TS_ASSEMBLER_CELL(&addr, 1234);
+		TS_ASSEMBLER_LOC = val_addr; 
+		TS_ASSEMBLER_CELL(1234);
 	}
 	u_push(val_addr);
-		TEST_ASSERT_RUN(1, fault, op_addr+1);
+	TEST_ASSERT_RUN(1, fault, op_addr+1);
 	if (!fault) 
 		verify_stack(1, 1234);
 	else
@@ -252,12 +256,14 @@ TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_FETCH, 0));
 
 // @ -- Fetch BYTE from address. 
 void testVmOpFetchByte(uint16_t op_addr, uint16_t val_addr, uint8_t fault) {
-	addr = op_addr; TS_ASSEMBLER_CODE(&addr, SC_OP_C_FETCH); IP = op_addr;
+	IP = TS_ASSEMBLER_LOC = op_addr; 
+	TS_ASSEMBLER_CODE(SC_OP_C_FETCH); 
 	if (!fault) {
-		addr = val_addr; TS_ASSEMBLER_CODE(&addr, 123);
+		TS_ASSEMBLER_LOC = val_addr; 
+		TS_ASSEMBLER_CODE(123);
 	}
 	u_push(val_addr);
-		TEST_ASSERT_RUN(1, fault, op_addr+1);
+	TEST_ASSERT_RUN(1, fault, op_addr+1);
 	if (!fault) 
 		verify_stack(1, 123);
 	else
@@ -271,7 +277,8 @@ TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_C_FETCH, 0));
 
 // ! -- Store CELL to address. 
 void testVmOpStoreCell(uint16_t op_addr, uint16_t val_addr, uint8_t fault) {
-	addr = op_addr; TS_ASSEMBLER_CODE(&addr, SC_OP_STORE); IP = op_addr;
+	IP = TS_ASSEMBLER_LOC = op_addr; 
+	TS_ASSEMBLER_CODE(SC_OP_STORE); 
 	u_push(1234);
 	u_push(val_addr);
 	TEST_ASSERT_RUN(1, fault, op_addr+1);
@@ -288,7 +295,8 @@ TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_STORE, 1));
 
 // ! -- Store BYTE to address. 
 void testVmOpStoreByte(uint16_t op_addr, uint16_t val_addr, uint8_t fault) {
-	addr = op_addr; TS_ASSEMBLER_CODE(&addr, SC_OP_C_STORE); IP = op_addr;
+	IP = TS_ASSEMBLER_LOC = op_addr; 
+	TS_ASSEMBLER_CODE(SC_OP_C_STORE);
 	u_push(123);
 	u_push(val_addr);
 	TEST_ASSERT_RUN(1, fault, op_addr+1);
@@ -305,7 +313,7 @@ TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_C_STORE, 1));
 
 // Clear stack.
 void testVmOpClear() {
-	TS_ASSEMBLER_CODE(&addr, SC_OP_CLEAR); 
+	TS_ASSEMBLER_CODE(SC_OP_CLEAR); 
 	u_push(123);
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 1);
 	TEST_ASSERT_EQUAL(0, u_depth());
@@ -313,7 +321,7 @@ void testVmOpClear() {
 
 // EMIT
 void testVmEmit() {
-	TS_ASSEMBLER_CODE(&addr, SC_OP_EMIT, SC_OP_EMIT, ); 
+	TS_ASSEMBLER_CODE(SC_OP_EMIT, SC_OP_EMIT, ); 
 	u_push('i');
 	u_push('h');
 	TEST_ASSERT_RUN(2, SC_FAULT_OK, 2);
@@ -323,7 +331,7 @@ TT_TEST_CASE(testVmOp_FailUnderflow(SC_OP_EMIT, 0));
 
 // KEY
 void testVmKey(const char* s) {
-	TS_ASSEMBLER_CODE(&addr, SC_OP_KEY, SC_OP_KEY, SC_OP_KEY, ); 
+	TS_ASSEMBLER_CODE(SC_OP_KEY, SC_OP_KEY, SC_OP_KEY, ); 
 	tsSetGetc("lo");
 	TEST_ASSERT_RUN(3, SC_FAULT_OK, 3);
 	verify_stack(3, 'l', 'o', -1);
@@ -332,8 +340,9 @@ TT_TEST_CASE(testVmOp_FailOverflow(SC_OP_KEY, 0));
 
 // CALL
 void testVmCall(uint16_t call_addr) {
-	TS_ASSEMBLER_CALL(&addr, call_addr); 	// Takes care of setting high bit.
-	addr = call_addr; TS_ASSEMBLER_CODE(&addr, SC_OP_DUP, SC_OP_RET); // Little sub
+	TS_ASSEMBLER_CALL(call_addr); 	// Assemble call ar address zero. Takes care of setting high bit.
+	TS_ASSEMBLER_LOC = call_addr; 
+	TS_ASSEMBLER_CODE(SC_OP_DUP, SC_OP_RET); // Little sub
 	u_push(1234);
 	
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, call_addr);
@@ -347,8 +356,9 @@ void testVmCall(uint16_t call_addr) {
 TT_TEST_CASE(testVmCall(2));
 TT_TEST_CASE(testVmCall(SC_HEAP_SIZE-2));
 void testVmCallBadReturn() {		// Munge return address.
-	TS_ASSEMBLER_CALL(&addr, 3); 
-	addr = 3; TS_ASSEMBLER_CODE(&addr, SC_OP_RET); 
+	TS_ASSEMBLER_CALL(3); 
+	TS_ASSEMBLER_LOC = 3; 
+	TS_ASSEMBLER_CODE(SC_OP_RET); 
 	
 	TEST_ASSERT_RUN(1, SC_FAULT_OK, 3);
 	verify_r_stack(1, 2);	// Return address.
@@ -357,12 +367,13 @@ void testVmCallBadReturn() {		// Munge return address.
 	r_clear(); FAULT = SC_FAULT_OK;		// Clear things checked in teardown.
 }
 void testVmCallBadAddress() {		// Call to address out of range.
-	TS_ASSEMBLER_CALL(&addr, 0xffff); 
+	TS_ASSEMBLER_CALL(0xffff); 
 	TEST_ASSERT_EQUAL(SC_FAULT_BAD_IP, scRun(1));	// Who cares what IP ends up.	
 	r_clear(); FAULT = SC_FAULT_OK;		// Clear things checked in teardown.
 }
 void testVmCallIpOverrun() {		// Call to address out of range.
-	IP = addr = SC_HEAP_SIZE-1; TS_ASSEMBLER_CODE(&addr, 0x80); 
+	IP = TS_ASSEMBLER_LOC = SC_HEAP_SIZE-1; 
+	TS_ASSEMBLER_CODE(0x80); 
 	TEST_ASSERT_EQUAL(SC_FAULT_BAD_IP, scRun(1));	// Who cares what IP ends up.
 	r_clear(); FAULT = SC_FAULT_OK;		// Clear things checked in teardown.
 }

@@ -26,24 +26,52 @@
 &&lit8, &&lit, &&fault, &&emit, &&key, &&ret, &&fetch, &&store, &&c_fetch, &&c_store, &&negate, &&zero_equals, &&invert, &&minus, &&times, &&slash_mod, &&drop, &&dup, &&swap, &&clear
 
 #define SC_SNIPPETS \
-	lit8: VERIFY_U_CAN_PUSH(1); CHECK_FAULT(scratch.u8 = heap_read_byte_ip()); u_push(scratch.u8); goto next; \
+	lit8: VERIFY_U_CAN_PUSH(1); CHECK_FAULT(scratch.u8 = heap_read_byte_ip()); u_push((sc_cell_t)scratch.u8); goto next; \
 	lit: VERIFY_U_CAN_PUSH(1); CHECK_FAULT(scratch.cell = heap_read_cell_ip()); u_push(scratch.cell); goto next; \
-	fault: VERIFY_U_CAN_POP(1); SET_FAULT(u_pop()); goto next; \
+	fault: VERIFY_U_CAN_POP(1); FAULT = u_pop(); goto next; \
 	emit: VERIFY_U_CAN_POP(1); CTX->putc(u_pop()); goto next; \
 	key: VERIFY_U_CAN_PUSH(1); u_push(CTX->getc()); goto next; \
-	ret: VERIFY_R_CAN_POP(1); IP = r_pop(); VERIFY_IP(); goto next; \
-	fetch: VERIFY_U_CAN_POP(1); CHECK_FAULT(u_tos = scHeapReadCell(u_tos)); goto next; \
-	store: VERIFY_U_CAN_POP(2); scratch.cell = u_pop(); CHECK_FAULT(scHeapWriteCell(scratch.cell, u_pop())); goto next; \
-	c_fetch: VERIFY_U_CAN_POP(1); CHECK_FAULT(u_tos = scHeapReadByte(u_tos)); goto next; \
-	c_store: VERIFY_U_CAN_POP(2); scratch.cell = u_pop(); CHECK_FAULT(scHeapWriteByte(scratch.cell, u_pop())); goto next; \
+	ret: VERIFY_R_CAN_POP(1); IP = r_pop();  if (!VERIFY_VAL_FOR_IP(IP)) FAULT = SC_FAULT_BAD_IP; goto next; \
+	fetch: VERIFY_U_CAN_POP(1); u_tos = scHeapReadCell(u_tos); goto next; \
+	store: VERIFY_U_CAN_POP(2); scratch.cell = u_pop(); scHeapWriteCell(scratch.cell, u_pop()); goto next; \
+	c_fetch: VERIFY_U_CAN_POP(1); u_tos = scHeapReadByte(u_tos); goto next; \
+	c_store: VERIFY_U_CAN_POP(2); scratch.cell = u_pop(); scHeapWriteByte(scratch.cell, u_pop()); goto next; \
 	negate: UNOP(-); goto next; \
 	zero_equals: VERIFY_U_CAN_POP(1); u_tos = u_tos ? 0 : -1; goto next; \
 	invert: VERIFY_U_CAN_POP(1); UNOP(~); goto next; \
 	minus: BINOP(-); goto next; \
 	times: BINOP(*); goto next; \
-	slash_mod: VERIFY_U_CAN_POP(2); div_t r; r = div(u_nos, u_tos); u_tos = r.rem; u_nos = r.quot; goto next; \
+	slash_mod: VERIFY_U_CAN_POP(2); scratch.rdiv = div(u_nos, u_tos); u_tos = scratch.rdiv.rem; u_nos = scratch.rdiv.quot; goto next; \
 	drop: VERIFY_U_CAN_POP(1); u_drop(); goto next; \
 	dup: VERIFY_U_CAN_POP(1); VERIFY_U_CAN_PUSH(1); scratch.cell = u_tos; u_push(scratch.cell); goto next; \
 	swap: VERIFY_U_CAN_POP(2); scratch.cell = u_tos; u_tos = u_nos; u_nos = scratch.cell; goto next; \
 	clear: u_clear(); goto next; \
 
+#define SC_CONST_DICT \
+    { 1271, SC_OP_INVERT }, \
+    { 1670, SC_OP_RET }, \
+    { 7276, SC_OP_SLASH_MOD }, \
+    { 14608, SC_OP_SWAP }, \
+    { 15788, SC_OP_LIT8 }, \
+    { 23596, SC_OP_DROP }, \
+    { 26632, SC_OP_ZERO_EQUALS }, \
+    { 29319, SC_OP_C_STORE }, \
+    { 29414, SC_OP_C_FETCH }, \
+    { 31353, SC_OP_NEGATE }, \
+    { 34768, SC_OP_EMIT }, \
+    { 35919, SC_OP_FAULT }, \
+    { 40860, SC_OP_CLEAR }, \
+    { 46468, SC_OP_STORE }, \
+    { 46472, SC_OP_MINUS }, \
+    { 46479, SC_OP_TIMES }, \
+    { 46565, SC_OP_FETCH }, \
+    { 48260, SC_OP_DUP }, \
+    { 56084, SC_OP_LIT }, \
+    { 61714, SC_OP_KEY }, \
+
+enum {
+	SC_WORD_PLUS = 4,
+	SC_WORD_1_PLUS = 11,
+	SC_WORD_1_MINUS = 20,
+	SC_WORD_2_PLUS = 28,
+};

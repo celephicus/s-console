@@ -28,44 +28,57 @@
 # Options are a set of space separated tags. 
 #  option `hide' excludes the primop or word from the dictionary, usually because the compiler can generate the required call.
 
-PRIMOP 	LIT8	'( - c)' "Pushes next byte in instruction stream." [hide] { VERIFY_U_CAN_PUSH(1); CHECK_FAULT(scratch.u8 = heap_read_byte_ip()); u_push(scratch.u8); }
-PRIMOP 	LIT		'( - v)' "Pushes next cell in instruction stream." [hide] { VERIFY_U_CAN_PUSH(1); CHECK_FAULT(scratch.cell = heap_read_cell_ip()); u_push(scratch.cell); }
-PRIMOP 	FAULT	'(n - )' "Sets fault state from stack.Stops VM." [] { VERIFY_U_CAN_POP(1); SET_FAULT(u_pop()); }
-PRIMOP  EMIT 	'(c - )' "Write the character to the console." [] { VERIFY_U_CAN_POP(1); CTX->putc(u_pop()); }
-PRIMOP  KEY 	'( - c|-1)' "Return a character read from the console, or -1 if none." [] { VERIFY_U_CAN_PUSH(1); u_push(CTX->getc()); }
-PRIMOP 	RET		'R(a - )' "Return from call, load IP from r-stack." [] { VERIFY_R_CAN_POP(1); IP = r_pop(); VERIFY_IP(); }
+PRIMOP 	LIT8	'( - c)' "Pushes next byte in instruction stream." [hide]  
+	VERIFY_U_CAN_PUSH(1); CHECK_FAULT(scratch.u8 = heap_read_byte_ip()); u_push((sc_cell_t)scratch.u8); 
+PRIMOP 	LIT		'( - v)' "Pushes next cell in instruction stream." [hide]  
+	VERIFY_U_CAN_PUSH(1); CHECK_FAULT(scratch.cell = heap_read_cell_ip()); u_push(scratch.cell); 
+PRIMOP 	FAULT	'(n - )' "Sets fault state from stack.Stops VM." []  VERIFY_U_CAN_POP(1); FAULT = u_pop(); 
+PRIMOP  EMIT 	'(c - )' "Write the character to the console." []  VERIFY_U_CAN_POP(1); CTX->putc(u_pop()); 
+PRIMOP  KEY 	'( - c|-1)' "Return a character read from the console, or -1 if none." []  VERIFY_U_CAN_PUSH(1); u_push(CTX->getc()); 
+PRIMOP 	RET		'R(a - )' "Return from call, load IP from r-stack." []  
+	VERIFY_R_CAN_POP(1); IP = r_pop(); 
+	if (!VERIFY_VAL_FOR_IP(IP)) FAULT = SC_FAULT_BAD_IP; 
 
 # Memory fetch/store.
-PRIMOP  @	'(addr - v)' "Read cell value at addr." [n=fetch] { VERIFY_U_CAN_POP(1); CHECK_FAULT(u_tos = scHeapReadCell(u_tos)); }
-PRIMOP  !	'(v addr - )' "Write cell value at addr " [n=store] { VERIFY_U_CAN_POP(2); scratch.cell = u_pop(); CHECK_FAULT(scHeapWriteCell(scratch.cell, u_pop())); }
-PRIMOP  C@	'(addr - c)' "Read byte value at addr " [n=c_fetch] { VERIFY_U_CAN_POP(1); CHECK_FAULT(u_tos = scHeapReadByte(u_tos)); }
-PRIMOP  C!	'(c addr - )' "Write byte value at addr " [n=c_store] { VERIFY_U_CAN_POP(2); scratch.cell = u_pop(); CHECK_FAULT(scHeapWriteByte(scratch.cell, u_pop())); }
+PRIMOP  @	'(addr - v)' "Read cell value at addr." [n=fetch]  VERIFY_U_CAN_POP(1); u_tos = scHeapReadCell(u_tos); 
+PRIMOP  !	'(v addr - )' "Write cell value at addr " [n=store]  
+	VERIFY_U_CAN_POP(2); scratch.cell = u_pop(); scHeapWriteCell(scratch.cell, u_pop()); 
+PRIMOP  C@	'(addr - c)' "Read byte value at addr " [n=c_fetch]  VERIFY_U_CAN_POP(1); u_tos = scHeapReadByte(u_tos); 
+PRIMOP  C!	'(c addr - )' "Write byte value at addr " [n=c_store]  
+	VERIFY_U_CAN_POP(2); scratch.cell = u_pop(); scHeapWriteByte(scratch.cell, u_pop()); 
 
 # Unary operators.
-PRIMOP  NEGATE	'(n - -n)' "Change sign of signed value on TOS." [] { UNOP(-); }
-PRIMOP 	0=		'(v -- f)' "TRUE on zero, false otherwise. Or reverse the boolean value of v." [n=zero_equals] { VERIFY_U_CAN_POP(1); u_tos = u_tos ? 0 : -1; }
-PRIMOP  INVERT	'(v1 - v2)' "Invert all bits (1's complement)." [] { VERIFY_U_CAN_POP(1); UNOP(~); }
+PRIMOP  NEGATE	'(n - -n)' "Change sign of signed value on TOS." []  UNOP(-); 
+PRIMOP 	0=		'(v -- f)' "TRUE on zero, false otherwise. Or reverse the boolean value of v." [n=zero_equals]  
+	VERIFY_U_CAN_POP(1); u_tos = u_tos ? 0 : -1; 
+PRIMOP  INVERT	'(v1 - v2)' "Invert all bits (1's complement)." []  VERIFY_U_CAN_POP(1); UNOP(~); 
 
 # Binary operators.
-PRIMOP  -	'(n1 n2 - n3)' "Subtract n2 from n1 and leave the result in n3." [n=minus] { BINOP(-); }
-PRIMOP  *	'(n1 n2 - n3)' "Multiply n1 by n2 and leave the result in n3 using signed arithmetic." [n=times] { BINOP(*); }
+PRIMOP  -	'(n1 n2 - n3)' "Subtract n2 from n1 and leave the result in n3." [n=minus]  BINOP(-); 
+PRIMOP  *	'(n1 n2 - n3)' "Multiply n1 by n2 and leave the result in n3 using signed arithmetic." [n=times]  BINOP(*); 
+WORD	+	'(n1 n2 - n3)' "Add n1 to n2 and leave the result in n3." [n=plus]  NEGATE - 
+
+WORD  	1+	'(n - n+1)' "Increment TOS by one." [n=1_plus]  1 NEGATE -
+WORD  	1-	'(n - n-1)' "Decrement TOS by one." [n=1_minus]  1 - 
+WORD  	2+	'(n - n+1)' "Increment TOS by one." [n=2_plus]  1+ 1+
 
 # Misc operators.
-PRIMOP  /MOD	'(n1 n2 - n3 n4)' "Divide  n1 by n2 and leave the remainder n3 and  quotient  n4. n3 has the same sign as n1." [n=slash_mod] { VERIFY_U_CAN_POP(2); div_t r; r = div(u_nos, u_tos); u_tos = r.rem; u_nos = r.quot; }
+PRIMOP  /MOD	'(n1 n2 - n3 n4)' "Divide  n1 by n2 and leave the remainder n3 and  quotient  n4. n3 has the same sign as n1." 
+	[n=slash_mod]  
+	VERIFY_U_CAN_POP(2); scratch.rdiv = div(u_nos, u_tos); u_tos = scratch.rdiv.rem; u_nos = scratch.rdiv.quot; 
 
 # Stack operators.
-PRIMOP  DROP	'(v - )' "Discard top item from stack." [] { VERIFY_U_CAN_POP(1); u_drop(); }
-PRIMOP  DUP		'(v - v v)' "Duplicate top item from stack." [] { VERIFY_U_CAN_POP(1); VERIFY_U_CAN_PUSH(1); scratch.cell = u_tos; u_push(scratch.cell); }
-PRIMOP  SWAP	'(v1 v2 - v2 v1)' "Duplicate top item from stack." [] { VERIFY_U_CAN_POP(2); scratch.cell = u_tos; u_tos = u_nos; u_nos = scratch.cell; }
-PRIMOP  CLEAR	'( - <empty>)' "Clear stack." [] { u_clear(); }
+PRIMOP  DROP	'(v - )' "Discard top item from stack." []  VERIFY_U_CAN_POP(1); u_drop(); 
+PRIMOP  DUP		'(v - v v)' "Duplicate top item from stack." []  
+	VERIFY_U_CAN_POP(1); VERIFY_U_CAN_PUSH(1); scratch.cell = u_tos; u_push(scratch.cell); 
+PRIMOP  SWAP	'(v1 v2 - v2 v1)' "Duplicate top item from stack." []  
+	VERIFY_U_CAN_POP(2); scratch.cell = u_tos; u_tos = u_nos; u_nos = scratch.cell; 
+PRIMOP  CLEAR	'( - <empty>)' "Clear stack." []  u_clear(); 
 
 IGNORE
 
-WORD  	INC	'(n - n+1)' "Increment TOS by one." [] { LIT8 1 + }
-WORD  	DEC	'(n - n-1)' "Decrement TOS by one." [] { LIT8 1 - }
-WORD	+	'(n1 n2 - n3)' "Add n1 to n2 and leave the result in n3." [n=plus] { NEGATE - }
-WORD  	/	'(n1 n2 - n3)' "Divide n1 by n2 and leave the quotient in n3 using signed arithmetic." [n=divide] { /MOD NIP }
-WORD  	MOD	'(n1 n2 - n3)' "Divide n1 by n2 and leave the remainder in n3 using signed arithmetic." [n=divide] { /MOD DROP }
+WORD  	/	'(n1 n2 - n3)' "Divide n1 by n2 and leave the quotient in n3 using signed arithmetic." [n=divide]  /MOD NIP 
+WORD  	MOD	'(n1 n2 - n3)' "Divide n1 by n2 and leave the remainder in n3 using signed arithmetic." [n=divide]  /MOD DROP 
 
         bind(0,  ret);						Return,                "(return)",              0   //             -  (from return)
 //        bind(1,  lit8);

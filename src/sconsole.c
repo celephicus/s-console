@@ -4,6 +4,9 @@
 #define SCONSOLE_WANT_INTERNAL_DEFS
 #include "sconsole.h"
 
+#define SC_STATIC /* empty */
+// TODO: implement SC_STATIC properly.
+
 // One instance of global state.
 ScState g_sc_state;
 
@@ -34,6 +37,45 @@ static sc_cell_t heap_read_cell_ip() {
 	return v;
 }
 
+SC_STATIC uint8_t sc_find_primitive_op(uint16_t h) {
+	typedef struct { uint16_t h; uint8_t op; } PrimopDef;
+	static const PrimopDef SC_PRIMITIVE_HASH[] = {
+		SC_CONST_DICT
+	};
+
+	const PrimopDef* low = &SC_PRIMITIVE_HASH[0];
+	const PrimopDef* high = low + ELEMENT_COUNT(SC_PRIMITIVE_HASH);
+	while (low <= high) {
+		const PrimopDef* mid = low + (high - low) / 2;  // Yes this is legal pointer arithmetic.
+
+		if (h == mid->h)
+			return mid->op;		// Found it!
+
+		if (mid->h < h)
+			low = mid + 1;
+
+		else
+			high = mid - 1;
+	}
+	return -1;
+ }
+ 
+// Hash function as we store command names as a 16 bit hash. Lower case letters are converted to upper case.
+// The values came from Wikipedia and seem to work well, in that collisions between the hash values of different commands are very rare.
+// All characters in the string are hashed even non-printable ones.
+#define HASH_START (5381)
+#define HASH_MULT (33)
+SC_STATIC uint16_t sc_hash(const char* str) {
+	uint16_t h = HASH_START;
+	char c;
+	while ('\0' != (c = *str++)) {
+		if ((c >= 'a') && (c <= 'z')) 	// Normalise letter case to UPPER CASE. 
+			c -= 'a' - 'A';
+		h = (h * HASH_MULT) ^ (uint16_t)c;
+	}
+	return h;
+}	 
+	
 // Used in the VM to check if an fault has been set, and jump to fault handler if it has. 
 #define CHECK_FAULT(op_) do { op_; if (FAULT) goto f_a_u_l_t; } while (0)
 
@@ -57,16 +99,18 @@ uint8_t scRun(int n) {
 	static const void* OPS[] = { SC_JUMPS };
 	union Scratch {
 		uint8_t u8;		
+		int8_t i8;		
 		sc_cell_t cell;	
 		uint16_t u16;
+		div_t rdiv;
 	} scratch;
 	
+next: 
 	if (FAULT) 			// Cannot run in fault state.
 		return FAULT;
 		
-next: 
 	if (0 == n) 	// Zero instructions to do so exit.
-		return FAULT;	// Catch case where a word snippet has just set a fault state without jumping to fault label and exiting. 
+		return SC_FAULT_OK;	
 	if (n > 0)	// Only for non-negative n: count instructions then exit when we have done our quota. 
 		n -= 1;
     

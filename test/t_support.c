@@ -15,6 +15,9 @@
 
 #include "t_support.h"
 
+// Assembler location counter. Access with TS_ASSEMBLER_LOC.
+uint16_t g_ts_assembler_loc;
+
 static ScContext* t_ctx;
 void ts_SetupScGlobals(ScContext* ctx) {
 	t_ctx = ctx;

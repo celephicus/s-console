@@ -7,6 +7,17 @@ void ts_DestroyScGlobals();
 void ts_SetupStackTestContext();
 void ts_DestroyStackTestContext();
 
+void tsSetupVmFixture();
+void tsDestroyVmFixture();
+void tsDumpVmFixture();
+
+// Test return value of scRun against expected value, FAULT state & IP. 
+void tsAssertVmRun(int n, uint8_t fault, uint16_t ip_exp);					
+
+// Verify stack contents.
+void tsAssertUStack(int depth, ...);
+void tsAssertRStack(int depth, ...);
+
 void tsSetGetc(const char* s);
 char* tsGetPutc();
 
